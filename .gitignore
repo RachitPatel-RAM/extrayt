@@ -1,2 +1,5 @@
 # Ignore environment variables
 .env
+# Ignore ffmpeg-static
+node_modules/ffmpeg-static/
+ffmpeg-static/
