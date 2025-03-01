@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Automation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #ff0000;
+            text-align: center;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .guide {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .radio-group {
+            margin: 10px 0;
+        }
+        button {
+            background-color: #ff0000;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            margin: 20px auto;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #cc0000;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .progress-bar {
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        .progress {
+            height: 100%;
+            background-color: #ff0000;
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YouTube Video Automation</h1>
+        <div class="guide">
+            <h2>How to Use This Tool</h2>
+            <p>This tool automates YouTube video creation using AI. Follow these steps:</p>
+            <ol>
+                <li><strong>Channel Selection:</strong> Choose your authenticated YouTube channel from the dropdown.</li>
+                <li><strong>Video Type:</strong> Select "Short Video" (60 seconds) or "Long Form" (5-6 minutes).</li>
+                <li><strong>Niche/Topic:</strong> Enter your video topic (e.g., "Cooking Tips for Beginners").</li>
+                <li><strong>Keywords:</strong> Add comma-separated keywords (e.g., "easy recipes, cooking, beginners").</li>
+                <li><strong>Instructions:</strong> Optional - Add specific details (e.g., "Focus on vegan recipes").</li>
+                <li>Click "✨ Create Magic Video ✨" to start the process.</li>
+            </ol>
+            <p><strong>Example:</strong> Niche: "Tech Tips", Keywords: "gadgets, tutorials, beginners", Instructions: "Explain smartphone features".</p>
+        </div>
+        <form id="videoForm">
+            <div class="form-group">
+                <label for="channelSelect">Select Your YouTube Channel:</label>
+                <select id="channelSelect" required>
+                    <option value="">-- Select a channel --</option>
+                    <!-- Channels will be populated via JavaScript -->
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Video Type:</label>
+                <div class="radio-group">
+                    <input type="radio" id="shortVideo" name="videoType" value="short" checked>
+                    <label for="shortVideo">Short Video (60 seconds)</label>
+                </div>
+                <div class="radio-group">
+                    <input type="radio" id="longVideo" name="videoType" value="long">
+                    <label for="longVideo">Long Form (5-6 minutes)</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="niche">Video Niche/Topic:</label>
+                <input type="text" id="niche" placeholder="e.g., Cooking, Tech Tips, Travel Guide" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="keywords">Keywords (comma separated):</label>
+                <input type="text" id="keywords" placeholder="e.g., beginner, tutorial, tips">
+            </div>
+            
+            <div class="form-group">
+                <label for="additionalInstructions">Additional Instructions (optional):</label>
+                <textarea id="additionalInstructions" rows="3" placeholder="Any specific details about the content you want included"></textarea>
+            </div>
+            
+            <button type="submit" id="magicButton">✨ Create Magic Video ✨</button>
+        </form>
+        
+        <div class="loading" id="loadingSection">
+            <h3 id="statusText">Processing your request...</h3>
+            <div class="progress-bar">
+                <div class="progress" id="progressBar"></div>
+            </div>
+            <p id="detailStatus">Initializing...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
