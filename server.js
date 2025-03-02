@@ -116,6 +116,7 @@ app.post('/api/create-video', async (req, res) => {
         oauth2Client.setCredentials({ access_token: token });
         console.log('Starting video creation with:', { channelId, videoType, niche, keywords, additionalInstructions });
 
+        // Step 1: Generate script
         console.log('Step 1: Generating script...');
         const openai = new OpenAI({ apiKey: openaiKey });
         let script;
@@ -128,19 +129,23 @@ app.post('/api/create-video', async (req, res) => {
             console.log('Script generated with gpt-3.5-turbo:', script);
         }
 
+        // Step 2: Collect media
         console.log('Step 2: Collecting media...');
         const mediaFiles = await collectMedia(script, niche, pexelsKey);
         if (!mediaFiles.length) throw new Error('No media files collected');
         console.log('Media collected:', mediaFiles);
 
+        // Step 3: Generate voiceover
         console.log('Step 3: Generating voiceover...');
         const voiceoverFile = await generateVoiceover(script, elevenlabsKey);
         console.log('Voiceover generated:', voiceoverFile);
 
+        // Step 4: Assemble video
         console.log('Step 4: Assembling video...');
         const videoFile = await assembleVideo(mediaFiles, voiceoverFile, script, videoType);
         console.log('Video assembled:', videoFile);
 
+        // Step 5: Upload to YouTube
         console.log('Step 5: Uploading to YouTube...');
         const uploadResult = await uploadToYouTube(videoFile, script, channelId, youtube);
         console.log('Video uploaded successfully:', uploadResult.id);

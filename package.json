@@ -25,5 +25,5 @@
   },
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "<<<<<<< HEAD\r Your local changes\r =======\r Remote changes from GitHub\r >>>>>>> origin/main"
 }
