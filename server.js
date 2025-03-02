@@ -53,22 +53,21 @@ app.get('/auth/youtube/callback', async (req, res) => {
     try {
         console.log('Handling OAuth callback with code:', code);
         const { tokens } = await oauth2Client.getToken(code);
-        req.session.youtubeToken = tokens.access_token; // Still store in session as fallback
+        req.session.youtubeToken = tokens.access_token;
         console.log('YouTube token:', tokens.access_token);
-        // Redirect with token as URL parameter
         res.redirect(`/?token=${tokens.access_token}`);
     } catch (error) {
-        console.error('OAuth callback error:', error);
+        console.error('OAuth callback error:', error.message);
         res.status(500).send('Authentication failed');
     }
 });
 
 app.get('/api/auth/check', async (req, res) => {
-    const token = req.query.token || req.session.youtubeToken; // Accept token from query or session
+    const token = req.query.token || req.session.youtubeToken;
     console.log('Checking auth with token:', token);
     if (!token) {
         console.log('No token provided');
-        return res.json({ authenticated: false });
+        return res.json({ authenticated: false, error: 'No token' });
     }
     const youtube = google.youtube({ version: 'v3', auth: token });
     try {
@@ -77,22 +76,31 @@ app.get('/api/auth/check', async (req, res) => {
             part: 'snippet',
             mine: true
         });
-        const channels = response.data.items.map(item => ({
+        console.log('Raw API response:', JSON.stringify(response.data, null, 2));
+        const channels = response.data.items ? response.data.items.map(item => ({
             id: item.id,
             name: item.snippet.title
-        }));
+        })) : [];
+        if (channels.length === 0) {
+            console.log('No channels found for this user');
+            return res.json({ authenticated: true, channels: [], warning: 'No channels found' });
+        }
         console.log('Channels fetched:', channels);
         res.json({ authenticated: true, channels });
     } catch (error) {
         console.error('Error fetching channels:', error.message);
-        res.json({ authenticated: false });
+        if (error.response) {
+            console.error('API error details:', error.response.data);
+        }
+        res.json({ authenticated: false, error: error.message });
     }
 });
 
+// Rest of your server.js code (unchanged from previous version)
 app.post('/api/create-video', async (req, res) => {
     try {
         const { channelId, videoType, niche, keywords, additionalInstructions, openaiKey, pexelsKey, elevenlabsKey } = req.body;
-        const token = req.session.youtubeToken || req.body.token; // Fallback to session or body
+        const token = req.session.youtubeToken || req.body.token;
         if (!token) {
             console.log('No YouTube token for video creation');
             return res.status(401).json({ success: false, error: 'YouTube token not provided' });
