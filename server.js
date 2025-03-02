@@ -161,55 +161,53 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
     const contentLength = videoType === 'short' ? 'approximately 60 seconds' : '5-6 minutes';
     const subjects = [
         `${niche}`,
-        `a ${niche} wonder`,
-        `the ${niche} world`,
-        `${niche} secrets`,
-        `hidden ${niche}`
+        `a ${niche} marvel`,
+        `the ${niche} realm`,
+        `${niche} mysteries`,
+        `secret ${niche}`
     ];
     const actions = [
-        "blows your mind with",
-        "reveals a twist like",
-        "surprises you by",
-        "amazes with",
-        "unlocks a mystery of"
+        "unveils a surprise like",
+        "shocks with",
+        "amazes by",
+        "reveals",
+        "intrigues with"
     ];
     const twists = [
-        "a shocking truth",
-        "an unexpected turn",
-        "a wild secret",
-        "something unreal",
-        "a quirky fact"
+        "a hidden gem",
+        "an odd twist",
+        "a bizarre truth",
+        "something wild",
+        "a rare find"
     ];
     const endings = [
-        "you won’t believe it!",
-        "it’s totally wild!",
-        "pretty crazy, right?",
-        "absolutely insane!",
-        "mind-blowing stuff!"
+        "you won’t see coming!",
+        "that flips everything!",
+        "totally out there!",
+        "you gotta hear!",
+        "that’s unreal!"
     ];
     const scenes = [];
-    let scriptText = "Hey everyone, get ready for some wild " + niche + "! ";
+    let scriptText = "Hey everyone, buckle up for some wild " + niche + "! ";
     
-    // Generate 5 unique facts
+    // Generate 5 unique facts, each with 3 sub-points
     for (let i = 0; i < 5; i++) {
         const subject = subjects[Math.floor(Math.random() * subjects.length)];
         const action = actions[Math.floor(Math.random() * actions.length)];
         const twist = twists[Math.floor(Math.random() * twists.length)];
         const ending = endings[Math.floor(Math.random() * endings.length)];
-        const fact = `${subject} ${action} ${twist} that’s ${ending}`;
-        scriptText += fact + " ";
         
-        // Break each fact into 3 sub-points for 15 scenes
         scenes.push({ narration: `${subject} ${action}`, visual_description: `${niche} intro`, duration: 60 / 18 });
-        scenes.push({ narration: `${twist}`, visual_description: `${niche} reveal`, duration: 60 / 18 });
-        scenes.push({ narration: `that’s ${ending}`, visual_description: `${niche} highlight`, duration: 60 / 18 });
+        scenes.push({ narration: `${twist}`, visual_description: `${niche} highlight`, duration: 60 / 18 });
+        scenes.push({ narration: `${ending}`, visual_description: `${niche} reveal`, duration: 60 / 18 });
+        scriptText += `${subject} ${action} ${twist} ${ending} `;
     }
     
     // Add outro as scenes 16-18
-    scenes.push({ narration: "That’s " + niche + " for you—", visual_description: niche + " wrap-up", duration: 60 / 18 });
-    scenes.push({ narration: "hit like and", visual_description: niche + " call to action", duration: 60 / 18 });
+    scenes.push({ narration: "That’s " + niche + "—", visual_description: niche + " wrap-up", duration: 60 / 18 });
+    scenes.push({ narration: "like and", visual_description: niche + " action", duration: 60 / 18 });
     scenes.push({ narration: "subscribe for more!", visual_description: niche + " outro", duration: 60 / 18 });
-    scriptText += "That’s " + niche + " for you—hit like and subscribe for more!";
+    scriptText += "That’s " + niche + "—like and subscribe for more!";
 
     const title = `Unbelievable ${niche} Secrets Revealed`;
     const description = `Discover wild ${niche} facts! #${niche.replace(/ /g, '')} #MindBlown`;
