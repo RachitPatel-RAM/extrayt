@@ -176,7 +176,7 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
         - scenes: Array of scene objects (narration, visual_description, duration in seconds)
     `;
     const response = await axios.post(
-        'https://api-inference.huggingface.co/models/mixtral-8x7b-instruct-v0.1',
+        'https://api-inference.huggingface.co/models/mixtralai/Mixtral-8x7B-Instruct-v0.1', // Corrected model ID
         {
             inputs: prompt,
             parameters: { max_length: 1000, temperature: 0.7 }
