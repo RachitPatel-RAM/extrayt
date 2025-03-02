@@ -13,7 +13,6 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware setup
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
@@ -24,14 +23,12 @@ app.use(session({
     cookie: { secure: process.env.NODE_ENV === 'production' }
 }));
 
-// Google OAuth2 client setup with environment variables
 const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID || 'YOUR_CLIENT_ID', // Use env var or placeholder
-    process.env.GOOGLE_CLIENT_SECRET || 'YOUR_CLIENT_SECRET', // Use env var or placeholder
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
     process.env.NODE_ENV === 'production' ? 'https://extrayt.onrender.com/auth/youtube/callback' : 'http://localhost:3000/auth/youtube/callback'
 );
 
-// OAuth redirect endpoint
 app.get('/auth/youtube', (req, res) => {
     console.log('Redirecting to Google OAuth...');
     const authUrl = oauth2Client.generateAuthUrl({
@@ -45,7 +42,6 @@ app.get('/auth/youtube', (req, res) => {
     res.redirect(authUrl);
 });
 
-// OAuth callback endpoint
 app.get('/auth/youtube/callback', async (req, res) => {
     const { code } = req.query;
     try {
@@ -60,7 +56,6 @@ app.get('/auth/youtube/callback', async (req, res) => {
     }
 });
 
-// Check authentication status
 app.get('/api/auth/check', async (req, res) => {
     if (!req.session.youtubeToken) {
         console.log('No YouTube token in session');
@@ -85,7 +80,6 @@ app.get('/api/auth/check', async (req, res) => {
     }
 });
 
-// Video creation endpoint
 app.post('/api/create-video', async (req, res) => {
     try {
         const { channelId, videoType, niche, keywords, additionalInstructions, openaiKey, pexelsKey, elevenlabsKey } = req.body;
@@ -115,7 +109,6 @@ app.post('/api/create-video', async (req, res) => {
     }
 });
 
-// Helper functions (unchanged)
 async function generateScript(niche, videoType, keywords, additionalInstructions, openai) {
     console.log('Generating script...');
     const contentLength = videoType === 'short' ? 'approximately 60 seconds' : '5-6 minutes';
