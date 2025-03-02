@@ -1,9 +1,5 @@
-# extrayt
-uplode vid in yt
 <<<<<<< HEAD
-# My Local extraYT Project
-This is my awesome video automation tool.
+Your local README content
 =======
-# extraYT
-Initial README from GitHub.
+Remote README content from GitHub
 >>>>>>> origin/main
