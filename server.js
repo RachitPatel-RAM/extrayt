@@ -189,11 +189,9 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
         }
     );
     const generatedText = response.data[0].generated_text;
-    // Ensure JSON format by parsing or adjusting output
     try {
         return JSON.parse(generatedText);
     } catch (e) {
-        // If not JSON, wrap it manually (basic fallback)
         return {
             title: `Amazing ${niche} Video`,
             description: `Discover ${niche}! #${niche.replace(/ /g, '')} #VideoContent`,

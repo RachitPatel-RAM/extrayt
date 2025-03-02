@@ -88,8 +88,8 @@ function checkYouTubeAuth() {
                 document.getElementById('videoForm').style.display = 'block';
                 document.getElementById('youtubeLogin').style.display = 'none';
             } else {
-                console.log('Authentication failed');
-                showError('Authentication failed. Please try logging in again.');
+                console.log('Authentication failed:', data.error);
+                showError('Authentication failed: ' + data.error);
                 localStorage.removeItem('youtubeToken');
                 document.getElementById('videoForm').style.display = 'none';
                 document.getElementById('youtubeLogin').style.display = 'block';
@@ -97,7 +97,7 @@ function checkYouTubeAuth() {
         })
         .catch(error => {
             console.error('Error checking authentication:', error);
-            showError('Error verifying login. Please try again.');
+            showError('Error verifying login: ' + error.message);
             localStorage.removeItem('youtubeToken');
             document.getElementById('videoForm').style.display = 'none';
             document.getElementById('youtubeLogin').style.display = 'block';
@@ -117,7 +117,7 @@ function createVideo(formData) {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Video creation failed: ' + response.statusText);
+            return response.json().then(err => { throw new Error(err.error || 'Unknown server error'); });
         }
         return response.json();
     })
@@ -157,7 +157,7 @@ function createVideo(formData) {
     })
     .catch(error => {
         console.error('Error during video creation:', error);
-        showError('An error occurred during video creation. Please try again.');
+        showError('Error during video creation: ' + error.message);
         document.getElementById('videoForm').style.display = 'block';
         document.getElementById('loadingSection').style.display = 'none';
     });
