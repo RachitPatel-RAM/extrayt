@@ -74,13 +74,12 @@ app.get('/api/auth/check', async (req, res) => {
         auth: oauth2Client
     });
     oauth2Client.setCredentials({ access_token: token });
-    console.log('API Key:', process.env.GOOGLE_API_KEY); // Log API key for debugging
     try {
         console.log('Fetching YouTube channels...');
         const response = await youtube.channels.list({
             part: 'snippet',
             mine: true,
-            key: process.env.GOOGLE_API_KEY // Add API key
+            key: process.env.GOOGLE_API_KEY
         });
         console.log('Raw API response:', JSON.stringify(response.data, null, 2));
         const channels = response.data.items ? response.data.items.map(item => ({
@@ -106,7 +105,7 @@ app.post('/api/create-video', async (req, res) => {
     try {
         const { channelId, videoType, niche, keywords, additionalInstructions, openaiKey, pexelsKey, elevenlabsKey, token } = req.body;
         if (!token) {
-            console.log('No YouTube token for video creation');
+            console.log('No YouTube token provided');
             return res.status(401).json({ success: false, error: 'YouTube token not provided' });
         }
         const youtube = google.youtube({
@@ -114,29 +113,50 @@ app.post('/api/create-video', async (req, res) => {
             auth: oauth2Client
         });
         oauth2Client.setCredentials({ access_token: token });
-        console.log('Creating video with:', { channelId, videoType, niche, keywords, additionalInstructions });
-        
+        console.log('Starting video creation with:', { channelId, videoType, niche, keywords, additionalInstructions });
+
+        // Step 1: Generate script
+        console.log('Step 1: Generating script...');
         const openai = new OpenAI({ apiKey: openaiKey });
         const script = await generateScript(niche, videoType, keywords, additionalInstructions, openai);
+        console.log('Script generated:', script);
+
+        // Step 2: Collect media
+        console.log('Step 2: Collecting media...');
         const mediaFiles = await collectMedia(script, niche, pexelsKey);
+        if (!mediaFiles.length) throw new Error('No media files collected');
+        console.log('Media collected:', mediaFiles);
+
+        // Step 3: Generate voiceover
+        console.log('Step 3: Generating voiceover...');
         const voiceoverFile = await generateVoiceover(script, elevenlabsKey);
+        console.log('Voiceover generated:', voiceoverFile);
+
+        // Step 4: Assemble video
+        console.log('Step 4: Assembling video...');
         const videoFile = await assembleVideo(mediaFiles, voiceoverFile, script, videoType);
+        console.log('Video assembled:', videoFile);
+
+        // Step 5: Upload to YouTube
+        console.log('Step 5: Uploading to YouTube...');
         const uploadResult = await uploadToYouTube(videoFile, script, channelId, youtube);
-        
         console.log('Video uploaded successfully:', uploadResult.id);
+
         res.json({
             success: true,
             videoId: uploadResult.id,
             videoUrl: `https://youtube.com/watch?v=${uploadResult.id}`
         });
     } catch (error) {
-        console.error('Error creating video:', error);
+        console.error('Error in video creation:', error.message);
+        if (error.response) {
+            console.error('Detailed error response:', error.response.data);
+        }
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
 async function generateScript(niche, videoType, keywords, additionalInstructions, openai) {
-    console.log('Generating script...');
     const contentLength = videoType === 'short' ? 'approximately 60 seconds' : '5-6 minutes';
     const prompt = `
         Create an engaging script for a ${contentLength} YouTube video about ${niche}.
@@ -166,7 +186,6 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
 }
 
 async function collectMedia(script, niche, pexelsKey) {
-    console.log('Collecting media...');
     const mediaDir = path.join(__dirname, 'temp', `media_${Date.now()}`);
     fs.mkdirSync(mediaDir, { recursive: true });
     const mediaFiles = [];
@@ -191,14 +210,13 @@ async function collectMedia(script, niche, pexelsKey) {
                 mediaFiles.push({ type: 'image', path: imagePath, scene: i, duration: scene.duration });
             }
         } catch (error) {
-            console.error(`Error collecting media for scene ${i}:`, error);
+            console.error(`Error collecting media for scene ${i}:`, error.message);
         }
     }
     return mediaFiles;
 }
 
 async function generateVoiceover(script, elevenlabsKey) {
-    console.log('Generating voiceover with ElevenLabs...');
     const audioDir = path.join(__dirname, 'temp', `audio_${Date.now()}`);
     fs.mkdirSync(audioDir, { recursive: true });
     const fullScript = script.scenes.map(scene => scene.narration).join(' ');
@@ -218,13 +236,12 @@ async function generateVoiceover(script, elevenlabsKey) {
         fs.writeFileSync(audioPath, Buffer.from(response.data));
         return audioPath;
     } catch (error) {
-        console.error('Error generating voiceover:', error);
+        console.error('Error generating voiceover:', error.message);
         throw error;
     }
 }
 
 async function assembleVideo(mediaFiles, voiceoverFile, script, videoType) {
-    console.log('Assembling video...');
     const outputDir = path.join(__dirname, 'temp', `output_${Date.now()}`);
     fs.mkdirSync(outputDir, { recursive: true });
     const outputPath = path.join(outputDir, 'final_video.mp4');
@@ -269,7 +286,6 @@ async function assembleVideo(mediaFiles, voiceoverFile, script, videoType) {
 }
 
 async function uploadToYouTube(videoFile, script, channelId, youtube) {
-    console.log('Uploading to YouTube...');
     const videoMetadata = {
         snippet: {
             title: script.title,
