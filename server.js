@@ -13,7 +13,6 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware setup
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
@@ -21,17 +20,15 @@ app.use(session({
     secret: crypto.randomBytes(32).toString('hex'),
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === 'production' } // Secure cookies on Render
+    cookie: { secure: process.env.NODE_ENV === 'production' }
 }));
 
-// Google OAuth2 client setup with environment variables
 const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     process.env.NODE_ENV === 'production' ? 'https://extrayt.onrender.com/auth/youtube/callback' : 'http://localhost:3000/auth/youtube/callback'
 );
 
-// OAuth redirect endpoint
 app.get('/auth/youtube', (req, res) => {
     console.log('Redirecting to Google OAuth...');
     const authUrl = oauth2Client.generateAuthUrl({
@@ -45,7 +42,6 @@ app.get('/auth/youtube', (req, res) => {
     res.redirect(authUrl);
 });
 
-// OAuth callback endpoint
 app.get('/auth/youtube/callback', async (req, res) => {
     const { code } = req.query;
     try {
@@ -60,7 +56,6 @@ app.get('/auth/youtube/callback', async (req, res) => {
     }
 });
 
-// Check authentication status
 app.get('/api/auth/check', async (req, res) => {
     if (!req.session.youtubeToken) {
         console.log('No YouTube token in session');
@@ -85,7 +80,6 @@ app.get('/api/auth/check', async (req, res) => {
     }
 });
 
-// Video creation endpoint
 app.post('/api/create-video', async (req, res) => {
     try {
         const { channelId, videoType, niche, keywords, additionalInstructions, openaiKey, pexelsKey, elevenlabsKey } = req.body;
@@ -101,7 +95,7 @@ app.post('/api/create-video', async (req, res) => {
         const mediaFiles = await collectMedia(script, niche, pexelsKey);
         const voiceoverFile = await generateVoiceover(script, elevenlabsKey);
         const videoFile = await assembleVideo(mediaFiles, voiceoverFile, script, videoType);
-        const uploadResult = await uploadToYouTube(videoFile, script, channelId, niche, keywords, youtube);
+        const uploadResult = await uploadToYouTube(videoFile, script, channelId, youtube);
         
         console.log('Video uploaded successfully:', uploadResult.id);
         res.json({
@@ -115,13 +109,12 @@ app.post('/api/create-video', async (req, res) => {
     }
 });
 
-// Helper functions
 async function generateScript(niche, videoType, keywords, additionalInstructions, openai) {
     console.log('Generating script...');
     const contentLength = videoType === 'short' ? 'approximately 60 seconds' : '5-6 minutes';
     const prompt = `
         Create an engaging script for a ${contentLength} YouTube video about ${niche}.
-        ${keywords ? `Include these keywords: ${keywords}.` : ''}
+        ${keywords ? `Incorporate these SEO keywords naturally: ${keywords}.` : ''}
         ${additionalInstructions ? `Additional instructions: ${additionalInstructions}` : ''}
         
         The script should include:
@@ -130,15 +123,15 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
         3. A strong call to action at the end
         
         Format the output as a JSON object with:
-        - title: A catchy title
-        - description: YouTube description with hashtags
+        - title: An SEO-friendly, catchy title (use keywords if provided)
+        - description: A YouTube description with 5-10 relevant hashtags (SEO-optimized, use keywords if provided)
         - script: Full narration script
         - scenes: Array of scene objects (narration, visual_description, duration in seconds)
     `;
     const completion = await openai.chat.completions.create({
         model: 'gpt-4',
         messages: [
-            { role: 'system', content: 'You are a professional YouTube script writer.' },
+            { role: 'system', content: 'You are a professional YouTube script writer skilled in SEO optimization.' },
             { role: 'user', content: prompt }
         ],
         response_format: { type: 'json_object' }
@@ -249,13 +242,13 @@ async function assembleVideo(mediaFiles, voiceoverFile, script, videoType) {
     });
 }
 
-async function uploadToYouTube(videoFile, script, channelId, niche, keywords, youtube) {
+async function uploadToYouTube(videoFile, script, channelId, youtube) {
     console.log('Uploading to YouTube...');
     const videoMetadata = {
         snippet: {
-            title: script.title,
-            description: script.description,
-            tags: keywords ? keywords.split(',').map(k => k.trim()) : [],
+            title: script.title, // SEO-friendly from OpenAI
+            description: script.description, // Includes hashtags from OpenAI
+            tags: script.description.match(/#\w+/g)?.map(tag => tag.slice(1)) || [], // Extract hashtags
             categoryId: '22' // People & Blogs
         },
         status: { privacyStatus: 'private' }

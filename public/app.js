@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!formData.channelId || !formData.niche || !formData.openaiKey || !formData.pexelsKey || !formData.elevenlabsKey) {
             console.error('Form validation failed: Missing required fields');
-            alert('Please fill all required fields and authenticate with YouTube');
+            alert('Please fill all required fields');
             return;
         }
         
