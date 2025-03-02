@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://apis.google.com https://www.gstatic.com https://accounts.google.com https://*.googleapis.com 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://accounts.google.com https://www.googleapis.com;">
     <title>YouTube Video Automation</title>
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
@@ -124,39 +125,31 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="openaiKey">OpenAI API Key:</label>
-                <input type="text" id="openaiKey" placeholder="Enter your OpenAI API key" required>
+                <label>OpenAI API Key: <input type="text" id="openaiKey" placeholder="Enter your OpenAI API key" required></label>
             </div>
             <div class="form-group">
-                <label for="pexelsKey">Pexels API Key:</label>
-                <input type="text" id="pexelsKey" placeholder="Enter your Pexels API key" required>
+                <label>Pexels API Key: <input type="text" id="pexelsKey" placeholder="Enter your Pexels API key" required></label>
             </div>
             <div class="form-group">
-                <label for="elevenlabsKey">ElevenLabs API Key:</label>
-                <input type="text" id="elevenlabsKey" placeholder="Enter your ElevenLabs API key" required>
+                <label>ElevenLabs API Key: <input type="text" id="elevenlabsKey" placeholder="Enter your ElevenLabs API key" required></label>
             </div>
             <div class="form-group">
                 <label>Video Type:</label>
                 <div class="radio-group">
-                    <input type="radio" id="shortVideo" name="videoType" value="short" checked>
-                    <label for="shortVideo">Short Video (60 seconds)</label>
+                    <label><input type="radio" id="shortVideo" name="videoType" value="short" checked> Short Video (60 seconds)</label>
                 </div>
                 <div class="radio-group">
-                    <input type="radio" id="longVideo" name="videoType" value="long">
-                    <label for="longVideo">Long Form (5-6 minutes)</label>
+                    <label><input type="radio" id="longVideo" name="videoType" value="long"> Long Form (5-6 minutes)</label>
                 </div>
             </div>
             <div class="form-group">
-                <label for="niche">Video Niche/Topic:</label>
-                <input type="text" id="niche" placeholder="e.g., Cooking, Tech Tips" required>
+                <label>Video Niche/Topic: <input type="text" id="niche" placeholder="e.g., Cooking, Tech Tips" required></label>
             </div>
             <div class="form-group">
-                <label for="keywords">Keywords (comma separated):</label>
-                <input type="text" id="keywords" placeholder="e.g., beginner, tutorial">
+                <label>Keywords (comma separated): <input type="text" id="keywords" placeholder="e.g., beginner, tutorial"></label>
             </div>
             <div class="form-group">
-                <label for="additionalInstructions">Additional Instructions (optional):</label>
-                <textarea id="additionalInstructions" rows="3" placeholder="Specific content details"></textarea>
+                <label>Additional Instructions (optional): <textarea id="additionalInstructions" rows="3" placeholder="Specific content details"></textarea></label>
             </div>
             <button type="submit" id="magicButton">✨ Create Magic Video ✨</button>
         </form>
