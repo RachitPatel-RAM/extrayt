@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Video Automation</title>
+    <script src="https://apis.google.com/js/api.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -27,6 +28,16 @@
             padding: 15px;
             background-color: #f0f0f0;
             border-radius: 4px;
+            line-height: 1.5;
+        }
+        .guide h2 {
+            margin-top: 0;
+        }
+        .guide ol {
+            padding-left: 20px;
+        }
+        .guide li {
+            margin-bottom: 10px;
         }
         .form-group {
             margin-bottom: 15px;
@@ -86,26 +97,44 @@
         <h1>YouTube Video Automation</h1>
         <div class="guide">
             <h2>How to Use This Tool</h2>
-            <p>This tool automates YouTube video creation using AI. Follow these steps:</p>
+            <p>This tool creates YouTube videos using AI. Follow these easy steps to get started:</p>
             <ol>
-                <li><strong>Channel Selection:</strong> Choose your authenticated YouTube channel from the dropdown.</li>
-                <li><strong>Video Type:</strong> Select "Short Video" (60 seconds) or "Long Form" (5-6 minutes).</li>
-                <li><strong>Niche/Topic:</strong> Enter your video topic (e.g., "Cooking Tips for Beginners").</li>
-                <li><strong>Keywords:</strong> Add comma-separated keywords (e.g., "easy recipes, cooking, beginners").</li>
-                <li><strong>Instructions:</strong> Optional - Add specific details (e.g., "Focus on vegan recipes").</li>
-                <li>Click "✨ Create Magic Video ✨" to start the process.</li>
+                <li><strong>Login with YouTube:</strong> Click the red "<em>Login with YouTube</em>" button at the top to connect your YouTube account. After logging in, you’ll see your channels in the "<strong>Select Your YouTube Channel</strong>" dropdown below.</li>
+                <li><strong>Add Your API Keys:</strong> You’ll need three API keys to use this tool. Fill these in the form below:
+                    <ul>
+                        <li><strong>OpenAI API Key:</strong> Get this from <a href="https://platform.openai.com/account/api-keys" target="_blank">OpenAI</a>. Sign up, go to API Keys, create a new key, and paste it into the "<strong>OpenAI API Key</strong>" field.</li>
+                        <li><strong>Pexels API Key:</strong> Get this from <a href="https://www.pexels.com/api/" target="_blank">Pexels</a>. Sign up, request an API key, and paste it into the "<strong>Pexels API Key</strong>" field.</li>
+                        <li><strong>ElevenLabs API Key:</strong> Get this from <a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a>. Sign up, go to your profile, find your API key, and paste it into the "<strong>ElevenLabs API Key</strong>" field.</li>
+                    </ul>
+                </li>
+                <li><strong>Choose Video Type:</strong> In the "<strong>Video Type</strong>" section, select either "<em>Short Video (60 seconds)</em>" or "<em>Long Form (5-6 minutes)</em>" by clicking the radio button.</li>
+                <li><strong>Set Video Topic:</strong> In the "<strong>Video Niche/Topic</strong>" field, type what your video is about (e.g., "Cooking Tips for Beginners").</li>
+                <li><strong>Add Keywords:</strong> In the "<strong>Keywords</strong>" field, enter words related to your topic, separated by commas (e.g., "easy recipes, cooking, beginners"). This helps your video get found on YouTube.</li>
+                <li><strong>Give Instructions (Optional):</strong> In the "<strong>Additional Instructions</strong>" box, add any special requests (e.g., "Focus on vegan recipes"). Leave it blank if none.</li>
+                <li><strong>Create Your Video:</strong> Click the red "<strong>✨ Create Magic Video ✨</strong>" button at the bottom to start. Wait for the progress bar to finish, and you’ll get a link to your video!</li>
             </ol>
-            <p><strong>Example:</strong> Niche: "Tech Tips", Keywords: "gadgets, tutorials, beginners", Instructions: "Explain smartphone features".</p>
+            <p><strong>Example:</strong> For a tech video, use Niche: "Tech Tips", Keywords: "gadgets, tutorials", Instructions: "Explain smartphone features".</p>
         </div>
-        <form id="videoForm">
+        <button id="youtubeLogin">Login with YouTube</button>
+        <form id="videoForm" style="display: none;">
             <div class="form-group">
                 <label for="channelSelect">Select Your YouTube Channel:</label>
                 <select id="channelSelect" required>
                     <option value="">-- Select a channel --</option>
-                    <!-- Channels will be populated via JavaScript -->
                 </select>
             </div>
-            
+            <div class="form-group">
+                <label for="openaiKey">OpenAI API Key:</label>
+                <input type="text" id="openaiKey" placeholder="Enter your OpenAI API key" required>
+            </div>
+            <div class="form-group">
+                <label for="pexelsKey">Pexels API Key:</label>
+                <input type="text" id="pexelsKey" placeholder="Enter your Pexels API key" required>
+            </div>
+            <div class="form-group">
+                <label for="elevenlabsKey">ElevenLabs API Key:</label>
+                <input type="text" id="elevenlabsKey" placeholder="Enter your ElevenLabs API key" required>
+            </div>
             <div class="form-group">
                 <label>Video Type:</label>
                 <div class="radio-group">
@@ -117,25 +146,20 @@
                     <label for="longVideo">Long Form (5-6 minutes)</label>
                 </div>
             </div>
-            
             <div class="form-group">
                 <label for="niche">Video Niche/Topic:</label>
-                <input type="text" id="niche" placeholder="e.g., Cooking, Tech Tips, Travel Guide" required>
+                <input type="text" id="niche" placeholder="e.g., Cooking, Tech Tips" required>
             </div>
-            
             <div class="form-group">
                 <label for="keywords">Keywords (comma separated):</label>
-                <input type="text" id="keywords" placeholder="e.g., beginner, tutorial, tips">
+                <input type="text" id="keywords" placeholder="e.g., beginner, tutorial">
             </div>
-            
             <div class="form-group">
                 <label for="additionalInstructions">Additional Instructions (optional):</label>
-                <textarea id="additionalInstructions" rows="3" placeholder="Any specific details about the content you want included"></textarea>
+                <textarea id="additionalInstructions" rows="3" placeholder="Specific content details"></textarea>
             </div>
-            
             <button type="submit" id="magicButton">✨ Create Magic Video ✨</button>
         </form>
-        
         <div class="loading" id="loadingSection">
             <h3 id="statusText">Processing your request...</h3>
             <div class="progress-bar">
@@ -144,7 +168,6 @@
             <p id="detailStatus">Initializing...</p>
         </div>
     </div>
-
     <script src="app.js"></script>
 </body>
 </html>
