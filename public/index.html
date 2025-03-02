@@ -100,6 +100,9 @@
         #success-message {
             color: green;
         }
+        #manualChannelSection {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -129,9 +132,13 @@
         <form id="videoForm" style="display: none;">
             <div class="form-group">
                 <label for="channelSelect">Select Your YouTube Channel:</label>
-                <select id="channelSelect" required>
+                <select id="channelSelect">
                     <option value="">-- Select a channel --</option>
                 </select>
+            </div>
+            <div class="form-group" id="manualChannelSection">
+                <label for="manualChannelId">Or Enter Channel ID Manually:</label>
+                <input type="text" id="manualChannelId" placeholder="e.g., UCxxxxxxxxxxxxxxxxxxxxxx">
             </div>
             <div class="form-group">
                 <label for="openaiKey">OpenAI API Key:</label>

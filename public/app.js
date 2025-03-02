@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (token) {
         localStorage.setItem('youtubeToken', token);
         console.log('Token from URL stored in localStorage:', token);
-        window.history.replaceState({}, document.title, '/'); // Clean URL
+        window.history.replaceState({}, document.title, '/');
     }
 
     const youtubeLoginButton = document.getElementById('youtubeLogin');
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         const formData = {
-            channelId: document.getElementById('channelSelect').value,
+            channelId: document.getElementById('channelSelect').value || document.getElementById('manualChannelId').value,
             videoType: document.querySelector('input[name="videoType"]:checked').value,
             niche: document.getElementById('niche').value,
             keywords: document.getElementById('keywords').value,
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
             openaiKey: document.getElementById('openaiKey').value,
             pexelsKey: document.getElementById('pexelsKey').value,
             elevenlabsKey: document.getElementById('elevenlabsKey').value,
-            token: localStorage.getItem('youtubeToken') // Include token
+            token: localStorage.getItem('youtubeToken')
         };
         
         if (!formData.channelId || !formData.niche || !formData.openaiKey || !formData.pexelsKey || !formData.elevenlabsKey || !formData.token) {
@@ -69,20 +69,27 @@ function checkYouTubeAuth() {
             const channelSelect = document.getElementById('channelSelect');
             channelSelect.innerHTML = '<option value="">-- Select a channel --</option>';
             
-            if (data.authenticated && data.channels && data.channels.length > 0) {
-                data.channels.forEach(channel => {
-                    const option = document.createElement('option');
-                    option.value = channel.id;
-                    option.textContent = channel.name;
-                    channelSelect.appendChild(option);
-                });
+            if (data.authenticated) {
+                if (data.channels && data.channels.length > 0) {
+                    data.channels.forEach(channel => {
+                        const option = document.createElement('option');
+                        option.value = channel.id;
+                        option.textContent = channel.name;
+                        channelSelect.appendChild(option);
+                    });
+                    console.log('Channels loaded successfully');
+                } else {
+                    console.log('No channels found, allowing manual input');
+                    showWarning('No channels found. Please enter your Channel ID manually below.');
+                    document.getElementById('manualChannelSection').style.display = 'block';
+                }
                 console.log('User authenticated, showing form');
                 showSuccess('Login successful! Please fill in the video details below.');
                 document.getElementById('videoForm').style.display = 'block';
                 document.getElementById('youtubeLogin').style.display = 'none';
             } else {
-                console.log('User authenticated but no channels found or auth failed');
-                showError('No channels found or authentication failed. Please try logging in again.');
+                console.log('Authentication failed');
+                showError('Authentication failed. Please try logging in again.');
                 localStorage.removeItem('youtubeToken');
                 document.getElementById('videoForm').style.display = 'none';
                 document.getElementById('youtubeLogin').style.display = 'block';
@@ -165,5 +172,12 @@ function showSuccess(message) {
 function showError(message) {
     const errorDiv = document.getElementById('error-message');
     errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+function showWarning(message) {
+    const errorDiv = document.getElementById('error-message');
+    errorDiv.textContent = message;
+    errorDiv.style.color = 'orange';
     errorDiv.style.display = 'block';
 }
