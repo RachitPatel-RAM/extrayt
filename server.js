@@ -159,41 +159,57 @@ app.post('/api/create-video', async (req, res) => {
 
 async function generateScript(niche, videoType, keywords, additionalInstructions) {
     const contentLength = videoType === 'short' ? 'approximately 60 seconds' : '5-6 minutes';
-    const factBases = [
-        { fact: `${niche} can surprise you with`, visual: `${niche} in action` },
-        { fact: `Did you know ${niche} hides`, visual: `${niche} close-up` },
-        { fact: `One wild thing about ${niche} is`, visual: `${niche} in nature` },
-        { fact: `${niche} might shock you when`, visual: `${niche} at its best` },
-        { fact: `Here’s a crazy ${niche} secret:`, visual: `${niche} revealed` }
+    const subjects = [
+        `${niche}`,
+        `a ${niche} wonder`,
+        `the ${niche} world`,
+        `${niche} secrets`,
+        `hidden ${niche}`
+    ];
+    const actions = [
+        "blows your mind with",
+        "reveals a twist like",
+        "surprises you by",
+        "amazes with",
+        "unlocks a mystery of"
+    ];
+    const twists = [
+        "a shocking truth",
+        "an unexpected turn",
+        "a wild secret",
+        "something unreal",
+        "a quirky fact"
     ];
     const endings = [
-        "it’s totally mind-blowing!",
         "you won’t believe it!",
-        "it’s almost unreal!",
-        "pretty wild, right?",
-        "absolutely insane!"
+        "it’s totally wild!",
+        "pretty crazy, right?",
+        "absolutely insane!",
+        "mind-blowing stuff!"
     ];
     const scenes = [];
-    let scriptText = "Intro: Hey everyone, get ready for some wild stuff about " + niche + "! ";
+    let scriptText = "Hey everyone, get ready for some wild " + niche + "! ";
+    
+    // Generate 5 unique facts
     for (let i = 0; i < 5; i++) {
-        const base = factBases[i % factBases.length];
-        const ending = endings[i % endings.length];
-        const factDetail = Math.random() > 0.5 ? "something huge" : "a tiny twist";
-        const narration = `${base.fact} ${factDetail} that ${ending}`;
-        scriptText += narration + " ";
-        scenes.push({ narration, visual_description: base.visual, duration: 60 / 18 });
+        const subject = subjects[Math.floor(Math.random() * subjects.length)];
+        const action = actions[Math.floor(Math.random() * actions.length)];
+        const twist = twists[Math.floor(Math.random() * twists.length)];
+        const ending = endings[Math.floor(Math.random() * endings.length)];
+        const fact = `${subject} ${action} ${twist} that’s ${ending}`;
+        scriptText += fact + " ";
+        
+        // Break each fact into 3 sub-points for 15 scenes
+        scenes.push({ narration: `${subject} ${action}`, visual_description: `${niche} intro`, duration: 60 / 18 });
+        scenes.push({ narration: `${twist}`, visual_description: `${niche} reveal`, duration: 60 / 18 });
+        scenes.push({ narration: `that’s ${ending}`, visual_description: `${niche} highlight`, duration: 60 / 18 });
     }
-    scriptText += "Outro: That’s " + niche + " for you—hit like and subscribe for more!";
-    scenes.push({ narration: "That’s " + niche + " for you—hit like and subscribe for more!", visual_description: niche + " outro", duration: 60 / 18 });
-
-    // Fill remaining scenes to reach 18
-    while (scenes.length < 18) {
-        const extraIndex = scenes.length % 5;
-        const base = factBases[extraIndex];
-        const ending = endings[extraIndex];
-        const narration = `${base.fact} another cool thing that ${ending}`;
-        scenes.push({ narration, visual_description: base.visual, duration: 60 / 18 });
-    }
+    
+    // Add outro as scenes 16-18
+    scenes.push({ narration: "That’s " + niche + " for you—", visual_description: niche + " wrap-up", duration: 60 / 18 });
+    scenes.push({ narration: "hit like and", visual_description: niche + " call to action", duration: 60 / 18 });
+    scenes.push({ narration: "subscribe for more!", visual_description: niche + " outro", duration: 60 / 18 });
+    scriptText += "That’s " + niche + " for you—hit like and subscribe for more!";
 
     const title = `Unbelievable ${niche} Secrets Revealed`;
     const description = `Discover wild ${niche} facts! #${niche.replace(/ /g, '')} #MindBlown`;
@@ -223,7 +239,7 @@ async function collectMedia(script, niche, pexelsKey) {
                 params: { query: searchQuery, per_page: 1 }
             });
             if (imageResponse.data.photos?.length > 0) {
-                const imageUrl = imageResponse.data.photos[0].src.small;
+                const imageUrl = imageResponse.data.photos[0].src.tiny;
                 const imagePath = path.join(mediaDir, `scene_${i}_image.jpg`);
                 const imageWriter = fs.createWriteStream(imagePath);
                 const imageDownload = await axios({ url: imageUrl, method: 'GET', responseType: 'stream' });
@@ -245,11 +261,11 @@ async function collectMedia(script, niche, pexelsKey) {
 async function generateVoiceover(script, elevenlabsKey) {
     const audioDir = path.join(__dirname, 'temp', `audio_${Date.now()}`);
     fs.mkdirSync(audioDir, { recursive: true });
-    const fullScript = script.scenes.map(scene => scene.narration).join(' ').substring(0, 500);
+    const fullScript = script.scenes.map(scene => scene.narration).join(' ').substring(0, 400);
     const audioPath = path.join(audioDir, 'voiceover.mp3');
     try {
         const response = await axios.post(
-            'https://api.elevenlabs.io/v1/text-to-speech/g6PPXWd0gEZTInT2NTuM', // Aahir voice ID
+            'https://api.elevenlabs.io/v1/text-to-speech/82hBsVN6GRUwWKT8d1Kz', // Your selected voice ID
             { text: fullScript, voice_settings: { stability: 0.5, similarity_boost: 0.5 } },
             {
                 headers: {
