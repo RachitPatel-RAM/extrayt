@@ -1,17 +1,14 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, setting up login and form...');
     
-    // Handle "Login with YouTube" button click
     const youtubeLoginButton = document.getElementById('youtubeLogin');
     youtubeLoginButton.addEventListener('click', function() {
         console.log('Login with YouTube clicked, redirecting to server OAuth...');
         window.location.href = '/auth/youtube';
     });
 
-    // Check authentication status on page load
     checkYouTubeAuth();
 
-    // Handle form submission
     const videoForm = document.getElementById('videoForm');
     videoForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -37,6 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('videoForm').style.display = 'none';
         document.getElementById('loadingSection').style.display = 'block';
         document.getElementById('error-message').style.display = 'none';
+        document.getElementById('success-message').style.display = 'none';
         
         createVideo(formData);
     });
@@ -45,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function checkYouTubeAuth() {
     fetch('/api/auth/check', { credentials: 'include' })
         .then(response => {
-            if (!response.ok) throw new Error('Auth check failed');
+            if (!response.ok) throw new Error('Auth check failed: ' + response.statusText);
             return response.json();
         })
         .then(data => {
@@ -60,6 +58,8 @@ function checkYouTubeAuth() {
                     option.textContent = channel.name;
                     channelSelect.appendChild(option);
                 });
+                console.log('User authenticated, showing form');
+                showSuccess('Login successful! Please fill in the video details below.');
                 document.getElementById('videoForm').style.display = 'block';
                 document.getElementById('youtubeLogin').style.display = 'none';
             } else {
@@ -131,6 +131,13 @@ function createVideo(formData) {
         document.getElementById('videoForm').style.display = 'block';
         document.getElementById('loadingSection').style.display = 'none';
     });
+}
+
+function showSuccess(message) {
+    const successDiv = document.getElementById('success-message');
+    successDiv.textContent = message;
+    successDiv.style.display = 'block';
+    successDiv.style.color = 'green';
 }
 
 function showError(message) {
