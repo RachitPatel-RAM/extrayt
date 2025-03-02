@@ -130,6 +130,7 @@ app.post('/api/create-video', async (req, res) => {
 
         // Step 3: Generate voiceover
         console.log('Step 3: Generating voiceover...');
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay to mimic single-user behavior
         const voiceoverFile = await generateVoiceover(script, elevenlabsKey);
         console.log('Voiceover generated:', voiceoverFile);
 
