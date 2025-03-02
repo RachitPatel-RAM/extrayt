@@ -6,7 +6,6 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const OpenAI = require('openai'); // Still used, but configured for DeepSeek
 const crypto = require('crypto');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
@@ -112,18 +111,14 @@ app.post('/api/create-video', async (req, res) => {
         oauth2Client.setCredentials({ access_token: token });
         console.log('Starting video creation with:', { channelId, videoType, niche, keywords, additionalInstructions });
 
-        // Step 1: Generate script with DeepSeek
-        console.log('Step 1: Generating script with DeepSeek...');
-        const openai = new OpenAI({
-            apiKey: openaiKey,
-            baseURL: 'https://api.deepseek.com' // DeepSeek API endpoint
-        });
+        // Step 1: Generate script with Hugging Face API
+        console.log('Step 1: Generating script with Hugging Face API...');
         let script;
         try {
-            script = await generateScript(niche, videoType, keywords, additionalInstructions, openai, 'deepseek-coder'); // DeepSeek model
-            console.log('Script generated with DeepSeek:', script);
+            script = await generateScript(niche, videoType, keywords, additionalInstructions, openaiKey);
+            console.log('Script generated with Hugging Face:', script);
         } catch (error) {
-            console.error('DeepSeek script generation failed:', error.message);
+            console.error('Script generation failed:', error.message);
             throw error;
         }
 
@@ -162,7 +157,7 @@ app.post('/api/create-video', async (req, res) => {
     }
 });
 
-async function generateScript(niche, videoType, keywords, additionalInstructions, openai, model) {
+async function generateScript(niche, videoType, keywords, additionalInstructions, apiKey) {
     const contentLength = videoType === 'short' ? 'approximately 60 seconds' : '5-6 minutes';
     const prompt = `
         Create an engaging script for a ${contentLength} YouTube video about ${niche}.
@@ -180,15 +175,32 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
         - script: Full narration script
         - scenes: Array of scene objects (narration, visual_description, duration in seconds)
     `;
-    const completion = await openai.chat.completions.create({
-        model: model, // DeepSeek model: 'deepseek-coder'
-        messages: [
-            { role: 'system', content: 'You are a professional YouTube script writer skilled in SEO optimization.' },
-            { role: 'user', content: prompt }
-        ],
-        response_format: { type: 'json_object' }
-    });
-    return JSON.parse(completion.choices[0].message.content);
+    const response = await axios.post(
+        'https://api-inference.huggingface.co/models/mixtral-8x7b-instruct-v0.1',
+        {
+            inputs: prompt,
+            parameters: { max_length: 1000, temperature: 0.7 }
+        },
+        {
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            }
+        }
+    );
+    const generatedText = response.data[0].generated_text;
+    // Ensure JSON format by parsing or adjusting output
+    try {
+        return JSON.parse(generatedText);
+    } catch (e) {
+        // If not JSON, wrap it manually (basic fallback)
+        return {
+            title: `Amazing ${niche} Video`,
+            description: `Discover ${niche}! #${niche.replace(/ /g, '')} #VideoContent`,
+            script: generatedText,
+            scenes: [{ narration: generatedText, visual_description: `Scene about ${niche}`, duration: 60 }]
+        };
+    }
 }
 
 async function collectMedia(script, niche, pexelsKey) {
