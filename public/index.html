@@ -115,18 +115,18 @@
                 <li><strong>Login with YouTube:</strong> Click the red "<em>Login with YouTube</em>" button at the top to connect your YouTube account. After logging in, you’ll see your channels in the "<strong>Select Your YouTube Channel</strong>" dropdown below.</li>
                 <li><strong>Add Your API Keys:</strong> You’ll need three API keys to use this tool. Fill these in the form below:
                     <ul>
-                        <li><strong>OpenAI API Key:</strong> Get this from <a href="https://platform.openai.com/account/api-keys" target="_blank">OpenAI</a>. Sign up, go to API Keys, create a new key, and paste it into the "<strong>OpenAI API Key</strong>" field.</li>
+                        <li><strong>DeepSeek API Key:</strong> Get this from <a href="https://platform.deepseek.com/" target="_blank">DeepSeek</a>. Sign up (free), go to API Keys, create a new key, and paste it into the "<strong>DeepSeek API Key</strong>" field. This powers the script generation for your video.</li>
                         <li><strong>Pexels API Key:</strong> Get this from <a href="https://www.pexels.com/api/" target="_blank">Pexels</a>. Sign up, request an API key, and paste it into the "<strong>Pexels API Key</strong>" field.</li>
                         <li><strong>ElevenLabs API Key:</strong> Get this from <a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a>. Sign up, go to your profile, find your API key, and paste it into the "<strong>ElevenLabs API Key</strong>" field.</li>
                     </ul>
                 </li>
                 <li><strong>Choose Video Type:</strong> In the "<strong>Video Type</strong>" section, select either "<em>Short Video (60 seconds)</em>" or "<em>Long Form (5-6 minutes)</em>" by clicking the radio button.</li>
-                <li><strong>Set Video Topic:</strong> In the "<strong>Video Niche/Topic</strong>" field, type what your video is about (e.g., "Cooking Tips for Beginners").</li>
-                <li><strong>Add Keywords:</strong> In the "<strong>Keywords</strong>" field, enter words related to your topic, separated by commas (e.g., "easy recipes, cooking, beginners"). This helps your video get found on YouTube.</li>
-                <li><strong>Give Instructions (Optional):</strong> In the "<strong>Additional Instructions</strong>" box, add any special requests (e.g., "Focus on vegan recipes"). Leave it blank if none.</li>
+                <li><strong>Set Video Topic:</strong> In the "<strong>Video Niche/Topic</strong>" field, type what your video is about (e.g., "Unique Unknown Facts").</li>
+                <li><strong>Add Keywords:</strong> In the "<strong>Keywords</strong>" field, enter words related to your topic, separated by commas (e.g., "facts, mysteries"). This helps your video get found on YouTube.</li>
+                <li><strong>Give Instructions (Optional):</strong> In the "<strong>Additional Instructions</strong>" box, add any special requests (e.g., "Make it surprising"). Leave it blank if none.</li>
                 <li><strong>Create Your Video:</strong> Click the red "<strong>✨ Create Magic Video ✨</strong>" button at the bottom to start. Wait for the progress bar to finish, and you’ll get a link to your video!</li>
             </ol>
-            <p><strong>Example:</strong> For a tech video, use Niche: "Tech Tips", Keywords: "gadgets, tutorials", Instructions: "Explain smartphone features".</p>
+            <p><strong>Example:</strong> For a mystery video, use Niche: "Unique Unknown Facts", Keywords: "facts, mysteries", Instructions: "Make it surprising".</p>
         </div>
         <button id="youtubeLogin">Login with YouTube</button>
         <form id="videoForm" style="display: none;">
@@ -141,8 +141,8 @@
                 <input type="text" id="manualChannelId" placeholder="e.g., UCxxxxxxxxxxxxxxxxxxxxxx">
             </div>
             <div class="form-group">
-                <label for="openaiKey">OpenAI API Key:</label>
-                <input type="text" id="openaiKey" placeholder="Enter your OpenAI API key" required>
+                <label for="openaiKey">DeepSeek API Key:</label>
+                <input type="text" id="openaiKey" placeholder="Enter your DeepSeek API key" required>
             </div>
             <div class="form-group">
                 <label for="pexelsKey">Pexels API Key:</label>
@@ -165,11 +165,11 @@
             </div>
             <div class="form-group">
                 <label for="niche">Video Niche/Topic:</label>
-                <input type="text" id="niche" placeholder="e.g., Cooking, Tech Tips" required>
+                <input type="text" id="niche" placeholder="e.g., Unique Unknown Facts" required>
             </div>
             <div class="form-group">
                 <label for="keywords">Keywords (comma separated):</label>
-                <input type="text" id="keywords" placeholder="e.g., beginner, tutorial">
+                <input type="text" id="keywords" placeholder="e.g., facts, mysteries">
             </div>
             <div class="form-group">
                 <label for="additionalInstructions">Additional Instructions (optional):</label>
