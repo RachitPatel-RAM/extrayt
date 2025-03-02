@@ -14,26 +14,19 @@ const FileStore = require('session-file-store')(session);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware setup
 app.use(cors({ credentials: true, origin: process.env.NODE_ENV === 'production' ? 'https://extrayt.onrender.com' : 'http://localhost:3000' }));
 app.use(bodyParser.json());
 app.use(express.static('public'));
 app.use(session({
     store: new FileStore({
-        path: './sessions', // Directory for session files
-        secret: 'your-secret-key-here', // Use a consistent secret
-        ttl: 86400, // 24 hours in seconds
-        logFn: console.log // Log session store activity
+        path: './sessions',
+        secret: 'your-secret-key-here',
+        ttl: 86400
     }),
-    secret: 'your-secret-key-here', // Same secret as store
+    secret: 'your-secret-key-here',
     resave: false,
     saveUninitialized: false,
-    cookie: { 
-        secure: process.env.NODE_ENV === 'production', 
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        httpOnly: true,
-        sameSite: 'lax' // Helps with cross-site requests
-    }
+    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 24 * 60 * 60 * 1000 }
 }));
 
 const oauth2Client = new google.auth.OAuth2(
@@ -60,13 +53,10 @@ app.get('/auth/youtube/callback', async (req, res) => {
     try {
         console.log('Handling OAuth callback with code:', code);
         const { tokens } = await oauth2Client.getToken(code);
-        req.session.youtubeToken = tokens.access_token;
-        console.log('YouTube token stored in session:', tokens.access_token);
-        console.log('Session ID:', req.sessionID);
-        req.session.save((err) => { // Explicitly save session
-            if (err) console.error('Session save error:', err);
-            res.redirect('/');
-        });
+        req.session.youtubeToken = tokens.access_token; // Still store in session as fallback
+        console.log('YouTube token:', tokens.access_token);
+        // Redirect with token as URL parameter
+        res.redirect(`/?token=${tokens.access_token}`);
     } catch (error) {
         console.error('OAuth callback error:', error);
         res.status(500).send('Authentication failed');
@@ -74,15 +64,15 @@ app.get('/auth/youtube/callback', async (req, res) => {
 });
 
 app.get('/api/auth/check', async (req, res) => {
-    console.log('Session ID on check:', req.sessionID);
-    console.log('Checking session token:', req.session.youtubeToken);
-    if (!req.session.youtubeToken) {
-        console.log('No YouTube token in session');
+    const token = req.query.token || req.session.youtubeToken; // Accept token from query or session
+    console.log('Checking auth with token:', token);
+    if (!token) {
+        console.log('No token provided');
         return res.json({ authenticated: false });
     }
-    const youtube = google.youtube({ version: 'v3', auth: req.session.youtubeToken });
+    const youtube = google.youtube({ version: 'v3', auth: token });
     try {
-        console.log('Fetching YouTube channels for authenticated user...');
+        console.log('Fetching YouTube channels...');
         const response = await youtube.channels.list({
             part: 'snippet',
             mine: true
@@ -94,7 +84,7 @@ app.get('/api/auth/check', async (req, res) => {
         console.log('Channels fetched:', channels);
         res.json({ authenticated: true, channels });
     } catch (error) {
-        console.error('Error checking auth:', error.message);
+        console.error('Error fetching channels:', error.message);
         res.json({ authenticated: false });
     }
 });
@@ -102,11 +92,12 @@ app.get('/api/auth/check', async (req, res) => {
 app.post('/api/create-video', async (req, res) => {
     try {
         const { channelId, videoType, niche, keywords, additionalInstructions, openaiKey, pexelsKey, elevenlabsKey } = req.body;
-        if (!req.session.youtubeToken) {
+        const token = req.session.youtubeToken || req.body.token; // Fallback to session or body
+        if (!token) {
             console.log('No YouTube token for video creation');
             return res.status(401).json({ success: false, error: 'YouTube token not provided' });
         }
-        const youtube = google.youtube({ version: 'v3', auth: req.session.youtubeToken });
+        const youtube = google.youtube({ version: 'v3', auth: token });
         console.log('Creating video with:', { channelId, videoType, niche, keywords, additionalInstructions });
         
         const openai = new OpenAI({ apiKey: openaiKey });

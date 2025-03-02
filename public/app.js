@@ -1,6 +1,14 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, setting up login and form...');
     
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+        localStorage.setItem('youtubeToken', token);
+        console.log('Token from URL stored in localStorage:', token);
+        window.history.replaceState({}, document.title, '/'); // Clean URL
+    }
+
     const youtubeLoginButton = document.getElementById('youtubeLogin');
     youtubeLoginButton.addEventListener('click', function() {
         console.log('Login with YouTube clicked, redirecting to server OAuth...');
@@ -21,10 +29,11 @@ document.addEventListener('DOMContentLoaded', function() {
             additionalInstructions: document.getElementById('additionalInstructions').value,
             openaiKey: document.getElementById('openaiKey').value,
             pexelsKey: document.getElementById('pexelsKey').value,
-            elevenlabsKey: document.getElementById('elevenlabsKey').value
+            elevenlabsKey: document.getElementById('elevenlabsKey').value,
+            token: localStorage.getItem('youtubeToken') // Include token
         };
         
-        if (!formData.channelId || !formData.niche || !formData.openaiKey || !formData.pexelsKey || !formData.elevenlabsKey) {
+        if (!formData.channelId || !formData.niche || !formData.openaiKey || !formData.pexelsKey || !formData.elevenlabsKey || !formData.token) {
             console.error('Form validation failed: Missing required fields');
             showError('Please fill all required fields');
             return;
@@ -41,7 +50,16 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function checkYouTubeAuth() {
-    fetch('/api/auth/check', { credentials: 'include' })
+    const token = localStorage.getItem('youtubeToken');
+    console.log('Checking auth with token from localStorage:', token);
+    if (!token) {
+        console.log('No token in localStorage');
+        document.getElementById('videoForm').style.display = 'none';
+        document.getElementById('youtubeLogin').style.display = 'block';
+        return;
+    }
+
+    fetch(`/api/auth/check?token=${token}`, { credentials: 'include' })
         .then(response => {
             if (!response.ok) throw new Error('Auth check failed: ' + response.statusText);
             return response.json();
@@ -63,14 +81,19 @@ function checkYouTubeAuth() {
                 document.getElementById('videoForm').style.display = 'block';
                 document.getElementById('youtubeLogin').style.display = 'none';
             } else {
-                console.log('User not authenticated or no channels found');
+                console.log('User authenticated but no channels found or auth failed');
+                showError('No channels found or authentication failed. Please try logging in again.');
+                localStorage.removeItem('youtubeToken');
                 document.getElementById('videoForm').style.display = 'none';
                 document.getElementById('youtubeLogin').style.display = 'block';
             }
         })
         .catch(error => {
             console.error('Error checking authentication:', error);
-            showError('Error checking authentication. Please try again.');
+            showError('Error verifying login. Please try again.');
+            localStorage.removeItem('youtubeToken');
+            document.getElementById('videoForm').style.display = 'none';
+            document.getElementById('youtubeLogin').style.display = 'block';
         });
 }
 
@@ -137,7 +160,6 @@ function showSuccess(message) {
     const successDiv = document.getElementById('success-message');
     successDiv.textContent = message;
     successDiv.style.display = 'block';
-    successDiv.style.color = 'green';
 }
 
 function showError(message) {
