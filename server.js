@@ -9,24 +9,31 @@ const { spawn } = require('child_process');
 const OpenAI = require('openai');
 const crypto = require('crypto');
 const session = require('express-session');
-const FileStore = require('session-file-store')(session); // Corrected package name
+const FileStore = require('session-file-store')(session);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// Middleware setup
+app.use(cors({ credentials: true, origin: process.env.NODE_ENV === 'production' ? 'https://extrayt.onrender.com' : 'http://localhost:3000' }));
 app.use(bodyParser.json());
 app.use(express.static('public'));
 app.use(session({
     store: new FileStore({
-        path: './sessions', // Directory to store session files
-        secret: crypto.randomBytes(32).toString('hex'),
-        ttl: 86400 // 24 hours in seconds
+        path: './sessions', // Directory for session files
+        secret: 'your-secret-key-here', // Use a consistent secret
+        ttl: 86400, // 24 hours in seconds
+        logFn: console.log // Log session store activity
     }),
-    secret: crypto.randomBytes(32).toString('hex'),
+    secret: 'your-secret-key-here', // Same secret as store
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+    saveUninitialized: false,
+    cookie: { 
+        secure: process.env.NODE_ENV === 'production', 
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        httpOnly: true,
+        sameSite: 'lax' // Helps with cross-site requests
+    }
 }));
 
 const oauth2Client = new google.auth.OAuth2(
@@ -55,7 +62,11 @@ app.get('/auth/youtube/callback', async (req, res) => {
         const { tokens } = await oauth2Client.getToken(code);
         req.session.youtubeToken = tokens.access_token;
         console.log('YouTube token stored in session:', tokens.access_token);
-        res.redirect('/');
+        console.log('Session ID:', req.sessionID);
+        req.session.save((err) => { // Explicitly save session
+            if (err) console.error('Session save error:', err);
+            res.redirect('/');
+        });
     } catch (error) {
         console.error('OAuth callback error:', error);
         res.status(500).send('Authentication failed');
@@ -63,6 +74,7 @@ app.get('/auth/youtube/callback', async (req, res) => {
 });
 
 app.get('/api/auth/check', async (req, res) => {
+    console.log('Session ID on check:', req.sessionID);
     console.log('Checking session token:', req.session.youtubeToken);
     if (!req.session.youtubeToken) {
         console.log('No YouTube token in session');

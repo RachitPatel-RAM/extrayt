@@ -89,10 +89,16 @@
             width: 0%;
             transition: width 0.3s;
         }
+        #error-message, #success-message {
+            text-align: center;
+            margin-top: 10px;
+            display: none;
+        }
         #error-message {
             color: red;
-            text-align: center;
-            display: none;
+        }
+        #success-message {
+            color: green;
         }
     </style>
 </head>
@@ -171,6 +177,7 @@
             </div>
             <p id="detailStatus">Initializing...</p>
         </div>
+        <div id="success-message"></div>
         <div id="error-message"></div>
         <div style="text-align: center; margin-top: 20px;">
             <a href="/privacy.html">Privacy Policy</a>
