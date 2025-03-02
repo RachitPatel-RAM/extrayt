@@ -6,7 +6,7 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const OpenAI = require('openai');
+const OpenAI = require('openai'); // Still used, but configured for DeepSeek
 const crypto = require('crypto');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
@@ -112,16 +112,19 @@ app.post('/api/create-video', async (req, res) => {
         oauth2Client.setCredentials({ access_token: token });
         console.log('Starting video creation with:', { channelId, videoType, niche, keywords, additionalInstructions });
 
-        // Step 1: Generate script
-        console.log('Step 1: Generating script...');
-        const openai = new OpenAI({ apiKey: openaiKey });
+        // Step 1: Generate script with DeepSeek
+        console.log('Step 1: Generating script with DeepSeek...');
+        const openai = new OpenAI({
+            apiKey: openaiKey,
+            baseURL: 'https://api.deepseek.com' // DeepSeek API endpoint
+        });
         let script;
         try {
-            script = await generateScript(niche, videoType, keywords, additionalInstructions, openai, 'gpt-3.5-turbo'); // Default to gpt-3.5-turbo
-            console.log('Script generated with gpt-3.5-turbo:', script);
+            script = await generateScript(niche, videoType, keywords, additionalInstructions, openai, 'deepseek-coder'); // DeepSeek model
+            console.log('Script generated with DeepSeek:', script);
         } catch (error) {
-            console.error('Script generation failed:', error.message);
-            throw error; // Let the outer catch handle quota errors
+            console.error('DeepSeek script generation failed:', error.message);
+            throw error;
         }
 
         // Step 2: Collect media
@@ -178,7 +181,7 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
         - scenes: Array of scene objects (narration, visual_description, duration in seconds)
     `;
     const completion = await openai.chat.completions.create({
-        model: model,
+        model: model, // DeepSeek model: 'deepseek-coder'
         messages: [
             { role: 'system', content: 'You are a professional YouTube script writer skilled in SEO optimization.' },
             { role: 'user', content: prompt }
