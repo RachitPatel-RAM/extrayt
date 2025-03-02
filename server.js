@@ -55,7 +55,7 @@ app.get('/auth/youtube/callback', async (req, res) => {
         console.log('Handling OAuth callback with code:', code);
         const { tokens } = await oauth2Client.getToken(code);
         req.session.youtubeToken = tokens.access_token;
-        console.log('YouTube token:', tokens.access_token);
+        console.log('YouTube token stored:', tokens.access_token);
         res.redirect(`/?token=${tokens.access_token}`);
     } catch (error) {
         console.error('OAuth callback error:', error.message);
@@ -87,10 +87,6 @@ app.get('/api/auth/check', async (req, res) => {
             id: item.id,
             name: item.snippet.title
         })) : [];
-        if (channels.length === 0) {
-            console.log('No channels found for this user');
-            return res.json({ authenticated: true, channels: [], warning: 'No channels found' });
-        }
         console.log('Channels fetched:', channels);
         res.json({ authenticated: true, channels });
     } catch (error) {
@@ -121,12 +117,11 @@ app.post('/api/create-video', async (req, res) => {
         const openai = new OpenAI({ apiKey: openaiKey });
         let script;
         try {
-            script = await generateScript(niche, videoType, keywords, additionalInstructions, openai, 'gpt-4');
-            console.log('Script generated with gpt-4:', script);
-        } catch (error) {
-            console.warn('GPT-4 failed, falling back to gpt-3.5-turbo:', error.message);
-            script = await generateScript(niche, videoType, keywords, additionalInstructions, openai, 'gpt-3.5-turbo');
+            script = await generateScript(niche, videoType, keywords, additionalInstructions, openai, 'gpt-3.5-turbo'); // Default to gpt-3.5-turbo
             console.log('Script generated with gpt-3.5-turbo:', script);
+        } catch (error) {
+            console.error('Script generation failed:', error.message);
+            throw error; // Let the outer catch handle quota errors
         }
 
         // Step 2: Collect media
