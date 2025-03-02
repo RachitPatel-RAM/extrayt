@@ -89,6 +89,11 @@
             width: 0%;
             transition: width 0.3s;
         }
+        #error-message {
+            color: red;
+            text-align: center;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -123,31 +128,39 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>OpenAI API Key: <input type="text" id="openaiKey" placeholder="Enter your OpenAI API key" required></label>
+                <label for="openaiKey">OpenAI API Key:</label>
+                <input type="text" id="openaiKey" placeholder="Enter your OpenAI API key" required>
             </div>
             <div class="form-group">
-                <label>Pexels API Key: <input type="text" id="pexelsKey" placeholder="Enter your Pexels API key" required></label>
+                <label for="pexelsKey">Pexels API Key:</label>
+                <input type="text" id="pexelsKey" placeholder="Enter your Pexels API key" required>
             </div>
             <div class="form-group">
-                <label>ElevenLabs API Key: <input type="text" id="elevenlabsKey" placeholder="Enter your ElevenLabs API key" required></label>
+                <label for="elevenlabsKey">ElevenLabs API Key:</label>
+                <input type="text" id="elevenlabsKey" placeholder="Enter your ElevenLabs API key" required>
             </div>
             <div class="form-group">
                 <label>Video Type:</label>
                 <div class="radio-group">
-                    <label><input type="radio" id="shortVideo" name="videoType" value="short" checked> Short Video (60 seconds)</label>
+                    <input type="radio" id="shortVideo" name="videoType" value="short" checked>
+                    <label for="shortVideo">Short Video (60 seconds)</label>
                 </div>
                 <div class="radio-group">
-                    <label><input type="radio" id="longVideo" name="videoType" value="long"> Long Form (5-6 minutes)</label>
+                    <input type="radio" id="longVideo" name="videoType" value="long">
+                    <label for="longVideo">Long Form (5-6 minutes)</label>
                 </div>
             </div>
             <div class="form-group">
-                <label>Video Niche/Topic: <input type="text" id="niche" placeholder="e.g., Cooking, Tech Tips" required></label>
+                <label for="niche">Video Niche/Topic:</label>
+                <input type="text" id="niche" placeholder="e.g., Cooking, Tech Tips" required>
             </div>
             <div class="form-group">
-                <label>Keywords (comma separated): <input type="text" id="keywords" placeholder="e.g., beginner, tutorial"></label>
+                <label for="keywords">Keywords (comma separated):</label>
+                <input type="text" id="keywords" placeholder="e.g., beginner, tutorial">
             </div>
             <div class="form-group">
-                <label>Additional Instructions (optional): <textarea id="additionalInstructions" rows="3" placeholder="Specific content details"></textarea></label>
+                <label for="additionalInstructions">Additional Instructions (optional):</label>
+                <textarea id="additionalInstructions" rows="3" placeholder="Specific content details"></textarea>
             </div>
             <button type="submit" id="magicButton">✨ Create Magic Video ✨</button>
         </form>
@@ -158,6 +171,7 @@
             </div>
             <p id="detailStatus">Initializing...</p>
         </div>
+        <div id="error-message"></div>
         <div style="text-align: center; margin-top: 20px;">
             <a href="/privacy.html">Privacy Policy</a>
         </div>

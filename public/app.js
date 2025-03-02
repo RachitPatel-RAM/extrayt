@@ -1,14 +1,17 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, setting up login button...');
+    console.log('DOM loaded, setting up login and form...');
     
+    // Handle "Login with YouTube" button click
     const youtubeLoginButton = document.getElementById('youtubeLogin');
     youtubeLoginButton.addEventListener('click', function() {
         console.log('Login with YouTube clicked, redirecting to server OAuth...');
         window.location.href = '/auth/youtube';
     });
 
+    // Check authentication status on page load
     checkYouTubeAuth();
 
+    // Handle form submission
     const videoForm = document.getElementById('videoForm');
     videoForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -26,13 +29,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (!formData.channelId || !formData.niche || !formData.openaiKey || !formData.pexelsKey || !formData.elevenlabsKey) {
             console.error('Form validation failed: Missing required fields');
-            alert('Please fill all required fields');
+            showError('Please fill all required fields');
             return;
         }
         
         console.log('Submitting video creation form:', formData);
         document.getElementById('videoForm').style.display = 'none';
         document.getElementById('loadingSection').style.display = 'block';
+        document.getElementById('error-message').style.display = 'none';
         
         createVideo(formData);
     });
@@ -40,13 +44,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function checkYouTubeAuth() {
     fetch('/api/auth/check', { credentials: 'include' })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Auth check failed');
+            return response.json();
+        })
         .then(data => {
             console.log('Auth check response:', data);
             const channelSelect = document.getElementById('channelSelect');
             channelSelect.innerHTML = '<option value="">-- Select a channel --</option>';
             
-            if (data.authenticated) {
+            if (data.authenticated && data.channels && data.channels.length > 0) {
                 data.channels.forEach(channel => {
                     const option = document.createElement('option');
                     option.value = channel.id;
@@ -56,13 +63,14 @@ function checkYouTubeAuth() {
                 document.getElementById('videoForm').style.display = 'block';
                 document.getElementById('youtubeLogin').style.display = 'none';
             } else {
+                console.log('User not authenticated or no channels found');
                 document.getElementById('videoForm').style.display = 'none';
                 document.getElementById('youtubeLogin').style.display = 'block';
             }
         })
         .catch(error => {
             console.error('Error checking authentication:', error);
-            alert('Error checking authentication. Please try again.');
+            showError('Error checking authentication. Please try again.');
         });
 }
 
@@ -111,7 +119,6 @@ function createVideo(formData) {
                     document.getElementById('videoForm').reset();
                     document.getElementById('videoForm').style.display = 'block';
                     document.getElementById('loadingSection').style.display = 'none';
-                    progressBar.style.width = '0%';
                 }, 1000);
             }
         }
@@ -120,8 +127,14 @@ function createVideo(formData) {
     })
     .catch(error => {
         console.error('Error during video creation:', error);
-        alert('An error occurred. Please try again.');
+        showError('An error occurred during video creation. Please try again.');
         document.getElementById('videoForm').style.display = 'block';
         document.getElementById('loadingSection').style.display = 'none';
     });
+}
+
+function showError(message) {
+    const errorDiv = document.getElementById('error-message');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
 }
