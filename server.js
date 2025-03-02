@@ -69,12 +69,18 @@ app.get('/api/auth/check', async (req, res) => {
         console.log('No token provided');
         return res.json({ authenticated: false, error: 'No token' });
     }
-    const youtube = google.youtube({ version: 'v3', auth: token });
+    const youtube = google.youtube({
+        version: 'v3',
+        auth: oauth2Client
+    });
+    oauth2Client.setCredentials({ access_token: token });
+    console.log('API Key:', process.env.GOOGLE_API_KEY); // Log API key for debugging
     try {
         console.log('Fetching YouTube channels...');
         const response = await youtube.channels.list({
             part: 'snippet',
-            mine: true
+            mine: true,
+            key: process.env.GOOGLE_API_KEY // Add API key
         });
         console.log('Raw API response:', JSON.stringify(response.data, null, 2));
         const channels = response.data.items ? response.data.items.map(item => ({
@@ -96,16 +102,18 @@ app.get('/api/auth/check', async (req, res) => {
     }
 });
 
-// Rest of your server.js code (unchanged from previous version)
 app.post('/api/create-video', async (req, res) => {
     try {
-        const { channelId, videoType, niche, keywords, additionalInstructions, openaiKey, pexelsKey, elevenlabsKey } = req.body;
-        const token = req.session.youtubeToken || req.body.token;
+        const { channelId, videoType, niche, keywords, additionalInstructions, openaiKey, pexelsKey, elevenlabsKey, token } = req.body;
         if (!token) {
             console.log('No YouTube token for video creation');
             return res.status(401).json({ success: false, error: 'YouTube token not provided' });
         }
-        const youtube = google.youtube({ version: 'v3', auth: token });
+        const youtube = google.youtube({
+            version: 'v3',
+            auth: oauth2Client
+        });
+        oauth2Client.setCredentials({ access_token: token });
         console.log('Creating video with:', { channelId, videoType, niche, keywords, additionalInstructions });
         
         const openai = new OpenAI({ apiKey: openaiKey });
