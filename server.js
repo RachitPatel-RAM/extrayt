@@ -118,8 +118,15 @@ app.post('/api/create-video', async (req, res) => {
         // Step 1: Generate script
         console.log('Step 1: Generating script...');
         const openai = new OpenAI({ apiKey: openaiKey });
-        const script = await generateScript(niche, videoType, keywords, additionalInstructions, openai);
-        console.log('Script generated:', script);
+        let script;
+        try {
+            script = await generateScript(niche, videoType, keywords, additionalInstructions, openai, 'gpt-4');
+            console.log('Script generated with gpt-4:', script);
+        } catch (error) {
+            console.warn('GPT-4 failed, falling back to gpt-3.5-turbo:', error.message);
+            script = await generateScript(niche, videoType, keywords, additionalInstructions, openai, 'gpt-3.5-turbo');
+            console.log('Script generated with gpt-3.5-turbo:', script);
+        }
 
         // Step 2: Collect media
         console.log('Step 2: Collecting media...');
@@ -152,11 +159,11 @@ app.post('/api/create-video', async (req, res) => {
         if (error.response) {
             console.error('Detailed error response:', error.response.data);
         }
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, error: error.message, stack: error.stack });
     }
 });
 
-async function generateScript(niche, videoType, keywords, additionalInstructions, openai) {
+async function generateScript(niche, videoType, keywords, additionalInstructions, openai, model) {
     const contentLength = videoType === 'short' ? 'approximately 60 seconds' : '5-6 minutes';
     const prompt = `
         Create an engaging script for a ${contentLength} YouTube video about ${niche}.
@@ -175,7 +182,7 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
         - scenes: Array of scene objects (narration, visual_description, duration in seconds)
     `;
     const completion = await openai.chat.completions.create({
-        model: 'gpt-4',
+        model: model, // Use the specified model
         messages: [
             { role: 'system', content: 'You are a professional YouTube script writer skilled in SEO optimization.' },
             { role: 'user', content: prompt }
