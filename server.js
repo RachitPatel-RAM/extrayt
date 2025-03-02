@@ -10,6 +10,7 @@ const OpenAI = require('openai');
 const crypto = require('crypto');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
+const ffmpegPath = require('ffmpeg-static');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -115,7 +116,6 @@ app.post('/api/create-video', async (req, res) => {
         oauth2Client.setCredentials({ access_token: token });
         console.log('Starting video creation with:', { channelId, videoType, niche, keywords, additionalInstructions });
 
-        // Step 1: Generate script
         console.log('Step 1: Generating script...');
         const openai = new OpenAI({ apiKey: openaiKey });
         let script;
@@ -128,23 +128,19 @@ app.post('/api/create-video', async (req, res) => {
             console.log('Script generated with gpt-3.5-turbo:', script);
         }
 
-        // Step 2: Collect media
         console.log('Step 2: Collecting media...');
         const mediaFiles = await collectMedia(script, niche, pexelsKey);
         if (!mediaFiles.length) throw new Error('No media files collected');
         console.log('Media collected:', mediaFiles);
 
-        // Step 3: Generate voiceover
         console.log('Step 3: Generating voiceover...');
         const voiceoverFile = await generateVoiceover(script, elevenlabsKey);
         console.log('Voiceover generated:', voiceoverFile);
 
-        // Step 4: Assemble video
         console.log('Step 4: Assembling video...');
         const videoFile = await assembleVideo(mediaFiles, voiceoverFile, script, videoType);
         console.log('Video assembled:', videoFile);
 
-        // Step 5: Upload to YouTube
         console.log('Step 5: Uploading to YouTube...');
         const uploadResult = await uploadToYouTube(videoFile, script, channelId, youtube);
         console.log('Video uploaded successfully:', uploadResult.id);
@@ -182,7 +178,7 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
         - scenes: Array of scene objects (narration, visual_description, duration in seconds)
     `;
     const completion = await openai.chat.completions.create({
-        model: model, // Use the specified model
+        model: model,
         messages: [
             { role: 'system', content: 'You are a professional YouTube script writer skilled in SEO optimization.' },
             { role: 'user', content: prompt }
@@ -271,7 +267,7 @@ async function assembleVideo(mediaFiles, voiceoverFile, script, videoType) {
     }
     fs.writeFileSync(subtitleFile, subtitleContent);
     return new Promise((resolve, reject) => {
-        const ffmpegProcess = spawn('ffmpeg', [
+        const ffmpegProcess = spawn(ffmpegPath, [
             '-f', 'concat',
             '-safe', '0',
             '-i', ffmpegFile,
