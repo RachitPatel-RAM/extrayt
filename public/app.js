@@ -27,13 +27,12 @@ document.addEventListener('DOMContentLoaded', function() {
             niche: document.getElementById('niche').value,
             keywords: document.getElementById('keywords').value,
             additionalInstructions: document.getElementById('additionalInstructions').value,
-            openaiKey: document.getElementById('openaiKey').value,
             pexelsKey: document.getElementById('pexelsKey').value,
             elevenlabsKey: document.getElementById('elevenlabsKey').value,
             token: localStorage.getItem('youtubeToken')
         };
         
-        if (!formData.channelId || !formData.niche || !formData.openaiKey || !formData.pexelsKey || !formData.elevenlabsKey || !formData.token) {
+        if (!formData.channelId || !formData.niche || !formData.pexelsKey || !formData.elevenlabsKey || !formData.token) {
             console.error('Form validation failed: Missing required fields');
             showError('Please fill all required fields');
             return;
@@ -142,18 +141,18 @@ function createVideo(formData) {
                 statusText.textContent = step.message;
                 detailStatus.textContent = step.detail;
                 currentStep++;
-                setTimeout(updateProgress, 2000);
+                setTimeout(updateProgress, 1000); // Faster progress for demo
             } else {
                 setTimeout(() => {
                     alert(`Video created successfully! URL: ${data.videoUrl}`);
                     document.getElementById('videoForm').reset();
                     document.getElementById('videoForm').style.display = 'block';
                     document.getElementById('loadingSection').style.display = 'none';
-                }, 1000);
+                }, 500);
             }
         }
         
-        setTimeout(updateProgress, 1000);
+        setTimeout(updateProgress, 500);
     })
     .catch(error => {
         console.error('Error during video creation:', error);
