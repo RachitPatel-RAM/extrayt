@@ -111,12 +111,12 @@ app.post('/api/create-video', async (req, res) => {
         oauth2Client.setCredentials({ access_token: token });
         console.log('Starting video creation with:', { channelId, videoType, niche, keywords, additionalInstructions });
 
-        // Step 1: Generate script with Grok API
-        console.log('Step 1: Generating script with Grok API...');
+        // Step 1: Generate script
+        console.log('Step 1: Generating script...');
         let script;
         try {
             script = await generateScript(niche, videoType, keywords, additionalInstructions);
-            console.log('Script generated with Grok:', script);
+            console.log('Script generated:', script);
         } catch (error) {
             console.error('Script generation failed:', error.message);
             throw error;
@@ -159,48 +159,63 @@ app.post('/api/create-video', async (req, res) => {
 
 async function generateScript(niche, videoType, keywords, additionalInstructions) {
     const contentLength = videoType === 'short' ? 'approximately 60 seconds' : '5-6 minutes';
-    const prompt = `
-        Create an engaging script for a ${contentLength} YouTube video about ${niche}.
-        ${keywords ? `Incorporate these SEO keywords naturally: ${keywords}.` : ''}
-        ${additionalInstructions ? `Additional instructions: ${additionalInstructions}` : ''}
-        
-        The script should include:
-        1. An attention-grabbing intro
-        2. Clear sections with logical flow
-        3. A strong call to action at the end
-        
-        Format the output as a JSON object with:
-        - title: An SEO-friendly, catchy title (use keywords if provided)
-        - description: A YouTube description with 5-10 relevant hashtags (SEO-optimized, use keywords if provided)
-        - script: Full narration script
-        - scenes: Array of scene objects (narration, visual_description, duration in seconds)
-    `;
-    // Using Grok's internal API (simulated here as a fast response)
-    const response = await new Promise((resolve) => {
-        // Simulate Grok API call (in reality, this would use xAI's internal endpoint)
+    const factBases = [
+        { fact: `${niche} can surprise you with`, visual: `${niche} in action` },
+        { fact: `Did you know ${niche} hides`, visual: `${niche} close-up` },
+        { fact: `One wild thing about ${niche} is`, visual: `${niche} in nature` },
+        { fact: `${niche} might shock you when`, visual: `${niche} at its best` },
+        { fact: `Here’s a crazy ${niche} secret:`, visual: `${niche} revealed` }
+    ];
+    const endings = [
+        "it’s totally mind-blowing!",
+        "you won’t believe it!",
+        "it’s almost unreal!",
+        "pretty wild, right?",
+        "absolutely insane!"
+    ];
+    const scenes = [];
+    let scriptText = "Intro: Hey everyone, get ready for some wild stuff about " + niche + "! ";
+    for (let i = 0; i < 5; i++) {
+        const base = factBases[i % factBases.length];
+        const ending = endings[i % endings.length];
+        const factDetail = Math.random() > 0.5 ? "something huge" : "a tiny twist";
+        const narration = `${base.fact} ${factDetail} that ${ending}`;
+        scriptText += narration + " ";
+        scenes.push({ narration, visual_description: base.visual, duration: 60 / 18 });
+    }
+    scriptText += "Outro: That’s " + niche + " for you—hit like and subscribe for more!";
+    scenes.push({ narration: "That’s " + niche + " for you—hit like and subscribe for more!", visual_description: niche + " outro", duration: 60 / 18 });
+
+    // Fill remaining scenes to reach 18
+    while (scenes.length < 18) {
+        const extraIndex = scenes.length % 5;
+        const base = factBases[extraIndex];
+        const ending = endings[extraIndex];
+        const narration = `${base.fact} another cool thing that ${ending}`;
+        scenes.push({ narration, visual_description: base.visual, duration: 60 / 18 });
+    }
+
+    const title = `Unbelievable ${niche} Secrets Revealed`;
+    const description = `Discover wild ${niche} facts! #${niche.replace(/ /g, '')} #MindBlown`;
+
+    return new Promise((resolve) => {
         setTimeout(() => {
-            const scriptText = `Intro: Hey everyone, get ready for ${niche}! Main: Here's something cool about it. End: Like and subscribe!`;
             resolve({
-                title: `Cool ${niche} Video`,
-                description: `Explore ${niche}! #${niche.replace(/ /g, '')} #CoolStuff`,
+                title,
+                description,
                 script: scriptText,
-                scenes: [
-                    { narration: "Hey everyone, get ready!", visual_description: `Intro to ${niche}`, duration: 20 },
-                    { narration: "Here's something cool about it.", visual_description: `Main ${niche} content`, duration: 30 },
-                    { narration: "Like and subscribe!", visual_description: "Outro call to action", duration: 10 }
-                ]
+                scenes
             });
         }, 500); // Fast response simulation
     });
-    return response;
 }
 
 async function collectMedia(script, niche, pexelsKey) {
     const mediaDir = path.join(__dirname, 'temp', `media_${Date.now()}`);
     fs.mkdirSync(mediaDir, { recursive: true });
     const mediaFiles = [];
-    for (let i = 0; i < Math.min(script.scenes.length, 3); i++) { // Limit to 3 for speed
-        const scene = script.scenes[i];
+    const maxImages = 18;
+    const requests = script.scenes.slice(0, maxImages).map(async (scene, i) => {
         const searchQuery = `${niche} ${scene.visual_description}`.substring(0, 100);
         try {
             const imageResponse = await axios.get('https://api.pexels.com/v1/search', {
@@ -208,7 +223,7 @@ async function collectMedia(script, niche, pexelsKey) {
                 params: { query: searchQuery, per_page: 1 }
             });
             if (imageResponse.data.photos?.length > 0) {
-                const imageUrl = imageResponse.data.photos[0].src.medium; // Smaller image for speed
+                const imageUrl = imageResponse.data.photos[0].src.small;
                 const imagePath = path.join(mediaDir, `scene_${i}_image.jpg`);
                 const imageWriter = fs.createWriteStream(imagePath);
                 const imageDownload = await axios({ url: imageUrl, method: 'GET', responseType: 'stream' });
@@ -217,23 +232,24 @@ async function collectMedia(script, niche, pexelsKey) {
                     imageWriter.on('finish', resolve);
                     imageWriter.on('error', reject);
                 });
-                mediaFiles.push({ type: 'image', path: imagePath, scene: i, duration: scene.duration });
+                mediaFiles[i] = { type: 'image', path: imagePath, scene: i, duration: scene.duration };
             }
         } catch (error) {
             console.error(`Error collecting media for scene ${i}:`, error.message);
         }
-    }
-    return mediaFiles;
+    });
+    await Promise.all(requests);
+    return mediaFiles.filter(Boolean);
 }
 
 async function generateVoiceover(script, elevenlabsKey) {
     const audioDir = path.join(__dirname, 'temp', `audio_${Date.now()}`);
     fs.mkdirSync(audioDir, { recursive: true });
-    const fullScript = script.scenes.map(scene => scene.narration).join(' ').substring(0, 500); // Cap for speed
+    const fullScript = script.scenes.map(scene => scene.narration).join(' ').substring(0, 500);
     const audioPath = path.join(audioDir, 'voiceover.mp3');
     try {
         const response = await axios.post(
-            'https://api.elevenlabs.io/v1/text-to-speech/r21m7BAbXjtux814CeJE',
+            'https://api.elevenlabs.io/v1/text-to-speech/g6PPXWd0gEZTInT2NTuM', // Aahir voice ID
             { text: fullScript, voice_settings: { stability: 0.5, similarity_boost: 0.5 } },
             {
                 headers: {
@@ -285,7 +301,7 @@ async function assembleVideo(mediaFiles, voiceoverFile, script, videoType) {
             '-map', '1:a',
             '-shortest',
             '-vf', `subtitles=${subtitleFile}`,
-            '-preset', 'ultrafast', // Speed up encoding
+            '-preset', 'ultrafast',
             outputPath
         ]);
         ffmpegProcess.stderr.on('data', (data) => console.log(`FFmpeg: ${data}`));
