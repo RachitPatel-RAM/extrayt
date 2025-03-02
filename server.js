@@ -9,6 +9,7 @@ const { spawn } = require('child_process');
 const OpenAI = require('openai');
 const crypto = require('crypto');
 const session = require('express-session');
+const FileStore = require('session-file-store')(session); // Corrected package name
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,10 +18,15 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 app.use(session({
+    store: new FileStore({
+        path: './sessions', // Directory to store session files
+        secret: crypto.randomBytes(32).toString('hex'),
+        ttl: 86400 // 24 hours in seconds
+    }),
     secret: crypto.randomBytes(32).toString('hex'),
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === 'production' }
+    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 24 * 60 * 60 * 1000 } // 24 hours
 }));
 
 const oauth2Client = new google.auth.OAuth2(
@@ -57,6 +63,7 @@ app.get('/auth/youtube/callback', async (req, res) => {
 });
 
 app.get('/api/auth/check', async (req, res) => {
+    console.log('Checking session token:', req.session.youtubeToken);
     if (!req.session.youtubeToken) {
         console.log('No YouTube token in session');
         return res.json({ authenticated: false });
@@ -75,7 +82,7 @@ app.get('/api/auth/check', async (req, res) => {
         console.log('Channels fetched:', channels);
         res.json({ authenticated: true, channels });
     } catch (error) {
-        console.error('Error checking auth:', error);
+        console.error('Error checking auth:', error.message);
         res.json({ authenticated: false });
     }
 });
@@ -246,10 +253,10 @@ async function uploadToYouTube(videoFile, script, channelId, youtube) {
     console.log('Uploading to YouTube...');
     const videoMetadata = {
         snippet: {
-            title: script.title, // SEO-friendly from OpenAI
-            description: script.description, // Includes hashtags from OpenAI
-            tags: script.description.match(/#\w+/g)?.map(tag => tag.slice(1)) || [], // Extract hashtags
-            categoryId: '22' // People & Blogs
+            title: script.title,
+            description: script.description,
+            tags: script.description.match(/#\w+/g)?.map(tag => tag.slice(1)) || [],
+            categoryId: '22'
         },
         status: { privacyStatus: 'private' }
     };
