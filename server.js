@@ -99,7 +99,7 @@ app.get('/api/auth/check', async (req, res) => {
 
 app.post('/api/create-video', async (req, res) => {
     try {
-        const { channelId, videoType, niche, keywords, additionalInstructions, pexelsKey, elevenlabsKey, token } = req.body;
+        const { channelId, videoType, niche, keywords, additionalInstructions, pexelsKey, token } = req.body;
         if (!token) {
             console.log('No YouTube token provided');
             return res.status(401).json({ success: false, error: 'YouTube token not provided' });
@@ -128,18 +128,13 @@ app.post('/api/create-video', async (req, res) => {
         if (!mediaFiles.length) throw new Error('No media files collected');
         console.log('Media collected:', mediaFiles);
 
-        // Step 3: Generate voiceover with fallback
-        console.log('Step 3: Generating voiceover...');
-        const voiceoverFile = await generateVoiceoverWithFallback(script, elevenlabsKey || process.env.ELEVENLABS_API_KEY);
-        console.log('Voiceover generated:', voiceoverFile);
-
-        // Step 4: Assemble video
-        console.log('Step 4: Assembling video...');
-        const videoFile = await assembleVideo(mediaFiles, voiceoverFile, script, videoType);
+        // Step 3: Assemble video (silent with subtitles)
+        console.log('Step 3: Assembling video...');
+        const videoFile = await assembleVideo(mediaFiles, script, videoType);
         console.log('Video assembled:', videoFile);
 
-        // Step 5: Upload to YouTube
-        console.log('Step 5: Uploading to YouTube...');
+        // Step 4: Upload to YouTube
+        console.log('Step 4: Uploading to YouTube...');
         const uploadResult = await uploadToYouTube(videoFile, script, channelId, youtube);
         console.log('Video uploaded successfully:', uploadResult.id);
 
@@ -254,43 +249,7 @@ async function collectMedia(script, niche, pexelsKey) {
     return mediaFiles.filter(Boolean);
 }
 
-async function generateVoiceoverWithFallback(script, elevenlabsKey) {
-    const audioDir = path.join(__dirname, 'temp', `audio_${Date.now()}`);
-    fs.mkdirSync(audioDir, { recursive: true });
-    const fullScript = script.scenes.map(scene => scene.narration).join(' ').substring(0, 400);
-    const audioPath = path.join(audioDir, 'voiceover.mp3');
-    const voiceIds = ['82hBsVN6GRUwWKT8d1Kz', '21m00Tcm4TlvDq8ikWAM']; // Primary then fallback
-
-    for (const voiceId of voiceIds) {
-        try {
-            console.log(`Trying voice ID: ${voiceId}`);
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Delay to reduce flagging
-            const response = await axios.post(
-                `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
-                { text: fullScript, voice_settings: { stability: 0.5, similarity_boost: 0.5 } },
-                {
-                    headers: {
-                        'xi-api-key': elevenlabsKey,
-                        'Content-Type': 'application/json'
-                    },
-                    responseType: 'arraybuffer'
-                }
-            );
-            fs.writeFileSync(audioPath, Buffer.from(response.data));
-            console.log(`Voiceover generated with voice ID: ${voiceId}`);
-            return audioPath;
-        } catch (error) {
-            console.error(`Failed with voice ID ${voiceId}:`, error.message);
-            if (error.response && error.response.status === 401 && voiceId !== voiceIds[voiceIds.length - 1]) {
-                console.log('Falling back to next voice ID...');
-                continue; // Try the next voice
-            }
-            throw error; // If all fail, throw the last error
-        }
-    }
-}
-
-async function assembleVideo(mediaFiles, voiceoverFile, script, videoType) {
+async function assembleVideo(mediaFiles, script, videoType) {
     const outputDir = path.join(__dirname, 'temp', `output_${Date.now()}`);
     fs.mkdirSync(outputDir, { recursive: true });
     const outputPath = path.join(outputDir, 'final_video.mp4');
@@ -317,12 +276,8 @@ async function assembleVideo(mediaFiles, voiceoverFile, script, videoType) {
             '-f', 'concat',
             '-safe', '0',
             '-i', ffmpegFile,
-            '-i', voiceoverFile,
             '-c:v', 'libx264',
-            '-c:a', 'aac',
-            '-map', '0:v',
-            '-map', '1:a',
-            '-shortest',
+            '-an', // No audio
             '-vf', `subtitles=${subtitleFile}`,
             '-preset', 'ultrafast',
             outputPath
