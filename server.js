@@ -9,7 +9,6 @@ const { spawn } = require('child_process');
 const crypto = require('crypto');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
-const ffmpegPath = require('ffmpeg-static');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -272,7 +271,7 @@ async function assembleVideo(mediaFiles, script, videoType) {
     }
     fs.writeFileSync(subtitleFile, subtitleContent);
     return new Promise((resolve, reject) => {
-        const ffmpegProcess = spawn(ffmpegPath, [
+        const ffmpegProcess = spawn('/usr/bin/ffmpeg', [ // Use Render's system FFmpeg
             '-f', 'concat',
             '-safe', '0',
             '-i', ffmpegFile,
@@ -287,6 +286,7 @@ async function assembleVideo(mediaFiles, script, videoType) {
             if (code === 0) resolve(outputPath);
             else reject(new Error(`FFmpeg process exited with code ${code}`));
         });
+        ffmpegProcess.on('error', (err) => reject(err));
     });
 }
 
