@@ -128,10 +128,9 @@ app.post('/api/create-video', async (req, res) => {
         if (!mediaFiles.length) throw new Error('No media files collected');
         console.log('Media collected:', mediaFiles);
 
-        // Step 3: Generate voiceover
+        // Step 3: Generate voiceover with fallback
         console.log('Step 3: Generating voiceover...');
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay to mimic single-user behavior
-        const voiceoverFile = await generateVoiceover(script, elevenlabsKey);
+        const voiceoverFile = await generateVoiceoverWithFallback(script, elevenlabsKey || process.env.ELEVENLABS_API_KEY);
         console.log('Voiceover generated:', voiceoverFile);
 
         // Step 4: Assemble video
@@ -191,7 +190,6 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
     const scenes = [];
     let scriptText = "Hey everyone, buckle up for some wild " + niche + "! ";
     
-    // Generate 5 unique facts, each with 3 sub-points
     for (let i = 0; i < 5; i++) {
         const subject = subjects[Math.floor(Math.random() * subjects.length)];
         const action = actions[Math.floor(Math.random() * actions.length)];
@@ -204,7 +202,6 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
         scriptText += `${subject} ${action} ${twist} ${ending} `;
     }
     
-    // Add outro as scenes 16-18
     scenes.push({ narration: "That’s " + niche + "—", visual_description: niche + " wrap-up", duration: 60 / 18 });
     scenes.push({ narration: "like and", visual_description: niche + " action", duration: 60 / 18 });
     scenes.push({ narration: "subscribe for more!", visual_description: niche + " outro", duration: 60 / 18 });
@@ -221,7 +218,7 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
                 script: scriptText,
                 scenes
             });
-        }, 500); // Fast response simulation
+        }, 500);
     });
 }
 
@@ -257,28 +254,39 @@ async function collectMedia(script, niche, pexelsKey) {
     return mediaFiles.filter(Boolean);
 }
 
-async function generateVoiceover(script, elevenlabsKey) {
+async function generateVoiceoverWithFallback(script, elevenlabsKey) {
     const audioDir = path.join(__dirname, 'temp', `audio_${Date.now()}`);
     fs.mkdirSync(audioDir, { recursive: true });
     const fullScript = script.scenes.map(scene => scene.narration).join(' ').substring(0, 400);
     const audioPath = path.join(audioDir, 'voiceover.mp3');
-    try {
-        const response = await axios.post(
-            'https://api.elevenlabs.io/v1/text-to-speech/82hBsVN6GRUwWKT8d1Kz', // Your selected voice ID
-            { text: fullScript, voice_settings: { stability: 0.5, similarity_boost: 0.5 } },
-            {
-                headers: {
-                    'xi-api-key': elevenlabsKey,
-                    'Content-Type': 'application/json'
-                },
-                responseType: 'arraybuffer'
+    const voiceIds = ['82hBsVN6GRUwWKT8d1Kz', '21m00Tcm4TlvDq8ikWAM']; // Primary then fallback
+
+    for (const voiceId of voiceIds) {
+        try {
+            console.log(`Trying voice ID: ${voiceId}`);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Delay to reduce flagging
+            const response = await axios.post(
+                `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+                { text: fullScript, voice_settings: { stability: 0.5, similarity_boost: 0.5 } },
+                {
+                    headers: {
+                        'xi-api-key': elevenlabsKey,
+                        'Content-Type': 'application/json'
+                    },
+                    responseType: 'arraybuffer'
+                }
+            );
+            fs.writeFileSync(audioPath, Buffer.from(response.data));
+            console.log(`Voiceover generated with voice ID: ${voiceId}`);
+            return audioPath;
+        } catch (error) {
+            console.error(`Failed with voice ID ${voiceId}:`, error.message);
+            if (error.response && error.response.status === 401 && voiceId !== voiceIds[voiceIds.length - 1]) {
+                console.log('Falling back to next voice ID...');
+                continue; // Try the next voice
             }
-        );
-        fs.writeFileSync(audioPath, Buffer.from(response.data));
-        return audioPath;
-    } catch (error) {
-        console.error('Error generating voiceover:', error.message);
-        throw error;
+            throw error; // If all fail, throw the last error
+        }
     }
 }
 
