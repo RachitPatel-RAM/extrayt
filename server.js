@@ -96,216 +96,171 @@ app.get('/api/auth/check', async (req, res) => {
     }
 });
 
-app.post('/api/create-video', async (req, res) => {
+app.post('/api/create-shorts', async (req, res) => {
     try {
-        const { channelId, videoType, niche, keywords, additionalInstructions, pexelsKey, token } = req.body;
+        const { channelId, videoUrl, clipCount, pexelsKey, token } = req.body;
         if (!token) {
             console.log('No YouTube token provided');
-            return res.status(401).json({ success: false, error: 'YouTube token not provided' });
+            return res.status(401).json({ success: false, error: 'No token provided' });
         }
         const youtube = google.youtube({
             version: 'v3',
             auth: oauth2Client
         });
         oauth2Client.setCredentials({ access_token: token });
-        console.log('Starting video creation with:', { channelId, videoType, niche, keywords, additionalInstructions });
+        console.log('Starting short clip creation with:', { channelId, videoUrl, clipCount });
 
-        // Step 1: Generate script
-        console.log('Step 1: Generating script...');
-        let script;
-        try {
-            script = await generateScript(niche, videoType, keywords, additionalInstructions);
-            console.log('Script generated:', script);
-        } catch (error) {
-            console.error('Script generation failed:', error.message);
-            throw error;
+        // Step 1: Download and analyze video
+        console.log('Step 1: Downloading and analyzing video...');
+        const videoPath = await downloadVideo(videoUrl);
+        const duration = await getVideoDuration(videoPath);
+        const isHindi = await detectHindi(videoPath); // Basic detection
+
+        // Step 2: Generate clips
+        console.log('Step 2: Generating clips...');
+        const clips = await generateClips(videoPath, duration, clipCount || 5, isHindi, pexelsKey);
+
+        // Step 3: Upload clips to YouTube
+        console.log('Step 3: Uploading clips to YouTube...');
+        const uploadedClips = [];
+        for (const clip of clips) {
+            const uploadResult = await uploadToYouTube(clip.path, clip.metadata, channelId, youtube);
+            uploadedClips.push({ id: uploadResult.id, url: `https://youtube.com/watch?v=${uploadResult.id}` });
+            fs.unlinkSync(clip.path); // Clean up
         }
+        console.log('All clips uploaded:', uploadedClips);
 
-        // Step 2: Collect media
-        console.log('Step 2: Collecting media...');
-        const mediaFiles = await collectMedia(script, niche, pexelsKey);
-        if (!mediaFiles.length) throw new Error('No media files collected');
-        console.log('Media collected:', mediaFiles);
-
-        // Step 3: Assemble video (silent with subtitles)
-        console.log('Step 3: Assembling video...');
-        const videoFile = await assembleVideo(mediaFiles, script, videoType);
-        console.log('Video assembled:', videoFile);
-
-        // Step 4: Upload to YouTube
-        console.log('Step 4: Uploading to YouTube...');
-        const uploadResult = await uploadToYouTube(videoFile, script, channelId, youtube);
-        console.log('Video uploaded successfully:', uploadResult.id);
+        // Clean up temporary video
+        fs.unlinkSync(videoPath);
 
         res.json({
             success: true,
-            videoId: uploadResult.id,
-            videoUrl: `https://youtube.com/watch?v=${uploadResult.id}`
+            clips: uploadedClips
         });
     } catch (error) {
-        console.error('Error in video creation:', error.message);
-        if (error.response) {
-            console.error('Detailed error response:', error.response.data);
-        }
+        console.error('Error in short clip creation:', error.message);
         res.status(500).json({ success: false, error: error.message, stack: error.stack });
     }
 });
 
-async function generateScript(niche, videoType, keywords, additionalInstructions) {
-    const contentLength = videoType === 'short' ? 'approximately 60 seconds' : '5-6 minutes';
-    const subjects = [
-        `${niche}`,
-        `a ${niche} marvel`,
-        `the ${niche} universe`,
-        `${niche} secrets`,
-        `untold ${niche}`
-    ];
-    const actions = [
-        "unveils a spectacle like",
-        "captures with",
-        "amazes through",
-        "reveals with flair",
-        "enchants by"
-    ];
-    const twists = [
-        "a hidden marvel",
-        "a quirky surprise",
-        "a stunning truth",
-        "an epic discovery",
-        "a rare wonder"
-    ];
-    const endings = [
-        "that’ll blow your mind!",
-        "you’ll wish you knew sooner!",
-        "that changes the game!",
-        "worth every second!",
-        "that’s simply unreal!"
-    ];
-    const scenes = [];
-    let scriptText = `Hey adventurers, welcome to an incredible dive into ${niche}! Buckle up for a wild ride! `;
-    
-    // Generate 5 unique facts, each with 5 sub-scenes (25 scenes)
-    for (let i = 0; i < 5; i++) {
-        const subject = subjects[Math.floor(Math.random() * subjects.length)];
-        const action = actions[Math.floor(Math.random() * actions.length)];
-        const twist = twists[Math.floor(Math.random() * twists.length)];
-        const ending = endings[Math.floor(Math.random() * endings.length)];
-        
-        scenes.push({ narration: `${subject} ${action}`, visual_description: `${niche} epic start`, duration: 60 / 30 });
-        scenes.push({ narration: `${twist}`, visual_description: `${niche} stunning view`, duration: 60 / 30 });
-        scenes.push({ narration: `that’s ${ending.split(' ')[0]}`, visual_description: `${niche} dramatic zoom`, duration: 60 / 30 });
-        scenes.push({ narration: `${ending.split(' ').slice(1).join(' ')}`, visual_description: `${niche} vibrant scene`, duration: 60 / 30 });
-        scenes.push({ narration: `Wow, isn’t that incredible?`, visual_description: `${niche} awe-inspiring shot`, duration: 60 / 30 });
-        scriptText += `${subject} ${action} ${twist} ${ending} Wow, isn’t that incredible? `;
-    }
-    
-    // Add outro as scenes 26-30
-    scenes.push({ narration: `And that’s ${niche}—`, visual_description: `${niche} grand finale`, duration: 60 / 30 });
-    scenes.push({ narration: `a world of wonder`, visual_description: `${niche} sweeping recap`, duration: 60 / 30 });
-    scenes.push({ narration: `waiting for you!`, visual_description: `${niche} inviting view`, duration: 60 / 30 });
-    scenes.push({ narration: `Like this adventure`, visual_description: `${niche} like prompt`, duration: 60 / 30 });
-    scenes.push({ narration: `and subscribe for more!`, visual_description: `${niche} subscribe call`, duration: 60 / 30 });
-    scriptText += `And that’s ${niche}—a world of wonder waiting for you! Like this adventure and subscribe for more!`;
-
-    const title = `Stunning ${niche} Secrets Unveiled`;
-    const description = `Dive into the breathtaking world of ${niche}! #${niche.replace(/ /g, '')} #StunningSecrets`;
-
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({
-                title,
-                description,
-                script: scriptText,
-                scenes
-            });
-        }, 500);
-    });
-}
-
-async function collectMedia(script, niche, pexelsKey) {
-    const mediaDir = path.join(__dirname, 'temp', `media_${Date.now()}`);
-    fs.mkdirSync(mediaDir, { recursive: true });
-    const mediaFiles = [];
-    const maxImages = 30;
-    const requests = script.scenes.slice(0, maxImages).map(async (scene, i) => {
-        const searchQuery = `${niche} ${scene.visual_description}`.substring(0, 100);
-        try {
-            const imageResponse = await axios.get('https://api.pexels.com/v1/search', {
-                headers: { 'Authorization': pexelsKey },
-                params: { query: searchQuery, per_page: 1 }
-            });
-            if (imageResponse.data.photos?.length > 0) {
-                const imageUrl = imageResponse.data.photos[0].src.large;
-                const imagePath = path.join(mediaDir, `scene_${i}_image.jpg`);
-                const imageWriter = fs.createWriteStream(imagePath);
-                const imageDownload = await axios({ url: imageUrl, method: 'GET', responseType: 'stream' });
-                imageDownload.data.pipe(imageWriter);
-                await new Promise((resolve, reject) => {
-                    imageWriter.on('finish', resolve);
-                    imageWriter.on('error', reject);
-                });
-                mediaFiles[i] = { type: 'image', path: imagePath, scene: i, duration: scene.duration };
-            }
-        } catch (error) {
-            console.error(`Error collecting media for scene ${i}:`, error.message);
-        }
-    });
-    await Promise.all(requests);
-    return mediaFiles.filter(Boolean);
-}
-
-async function assembleVideo(mediaFiles, script, videoType) {
-    const outputDir = path.join(__dirname, 'temp', `output_${Date.now()}`);
-    fs.mkdirSync(outputDir, { recursive: true });
-    const outputPath = path.join(outputDir, 'final_video.mp4');
-    const ffmpegFile = path.join(outputDir, 'ffmpeg_commands.txt');
-    let ffmpegCommands = [];
-    for (const media of mediaFiles) {
-        ffmpegCommands.push(`file '${media.path}'`);
-        ffmpegCommands.push(`duration ${media.duration}`);
-    }
-    fs.writeFileSync(ffmpegFile, ffmpegCommands.join('\n'));
-    const subtitleFile = path.join(outputDir, 'subtitles.srt');
-    let subtitleContent = '';
-    let currentTime = 0;
-    for (let i = 0; i < script.scenes.length; i++) {
-        const scene = script.scenes[i];
-        const startTime = formatSrtTime(currentTime);
-        currentTime += scene.duration;
-        const endTime = formatSrtTime(currentTime);
-        subtitleContent += `${i + 1}\n${startTime} --> ${endTime}\n${scene.narration}\n\n`;
-    }
-    fs.writeFileSync(subtitleFile, subtitleContent);
+async function downloadVideo(videoUrl) {
+    const tempDir = path.join(__dirname, 'temp', `video_${Date.now()}`);
+    fs.mkdirSync(tempDir, { recursive: true });
+    const videoPath = path.join(tempDir, 'input.mp4');
+    const writer = fs.createWriteStream(videoPath);
+    const response = await axios({ url: videoUrl, method: 'GET', responseType: 'stream' });
+    response.data.pipe(writer);
     return new Promise((resolve, reject) => {
-        const ffmpegProcess = spawn('/usr/bin/ffmpeg', [
-            '-f', 'concat',
-            '-safe', '0',
-            '-i', ffmpegFile,
-            '-c:v', 'libx264',
-            '-an', // No audio
-            '-vf', `scale=940:628,subtitles=${subtitleFile}`, // Resize to even dimensions
-            '-preset', 'medium',
-            '-crf', '23',
-            outputPath
-        ]);
-        ffmpegProcess.stderr.on('data', (data) => console.log(`FFmpeg: ${data}`));
-        ffmpegProcess.on('close', (code) => {
-            if (code === 0) resolve(outputPath);
-            else reject(new Error(`FFmpeg process exited with code ${code}`));
-        });
-        ffmpegProcess.on('error', (err) => reject(err));
+        writer.on('finish', () => resolve(videoPath));
+        writer.on('error', reject);
     });
 }
 
-async function uploadToYouTube(videoFile, script, channelId, youtube) {
+async function getVideoDuration(videoPath) {
+    return new Promise((resolve, reject) => {
+        const ffmpegProcess = spawn('/usr/bin/ffmpeg', ['-i', videoPath]);
+        let duration = 0;
+        ffmpegProcess.stderr.on('data', (data) => {
+            const output = data.toString();
+            const match = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+            if (match) {
+                duration = parseInt(match[1]) * 3600 + parseInt(match[2]) * 60 + parseFloat(match[3]);
+            }
+        });
+        ffmpegProcess.on('close', (code) => {
+            if (code === 0 && duration) resolve(duration);
+            else reject(new Error('Failed to get video duration'));
+        });
+    });
+}
+
+async function detectHindi(videoPath) {
+    // Basic Hindi detection via metadata or simple audio check (limited without full ASR)
+    return new Promise((resolve) => {
+        const ffmpegProcess = spawn('/usr/bin/ffmpeg', ['-i', videoPath]);
+        ffmpegProcess.stderr.on('data', (data) => {
+            const output = data.toString();
+            if (output.includes('hindi') || output.includes('hin')) resolve(true); // Crude check
+        });
+        ffmpegProcess.on('close', () => resolve(false)); // Default to non-Hindi if no hint
+    });
+}
+
+async function generateClips(videoPath, duration, clipCount, isHindi, pexelsKey) {
+    const clipDuration = Math.min(60 / clipCount, 15); // Max 15s per clip
+    const clips = [];
+    const segmentLength = Math.floor(duration / clipCount);
+    
+    for (let i = 0; i < clipCount; i++) {
+        const startTime = i * segmentLength;
+        if (startTime + clipDuration > duration) break; // Avoid exceeding video length
+        
+        const outputDir = path.join(__dirname, 'temp', `clip_${Date.now()}_${i}`);
+        fs.mkdirSync(outputDir, { recursive: true });
+        const clipPath = path.join(outputDir, `clip_${i}.mp4`);
+        const subtitleFile = path.join(outputDir, `subtitle_${i}.srt`);
+
+        // Generate subtitle for this segment
+        const subtitleText = await generateSubtitle(startTime, clipDuration, isHindi);
+        fs.writeFileSync(subtitleFile, subtitleText);
+
+        // Extract clip with FFmpeg
+        await new Promise((resolve, reject) => {
+            const ffmpegProcess = spawn('/usr/bin/ffmpeg', [
+                '-i', videoPath,
+                '-ss', startTime,
+                '-t', clipDuration,
+                '-c:v', 'libx264',
+                '-an', // Silent for now
+                '-vf', `scale=1280:720,subtitles=${subtitleFile}`, // High-quality even dimensions
+                '-preset', 'medium',
+                '-crf', '23',
+                clipPath,
+                '-y' // Overwrite
+            ]);
+            ffmpegProcess.stderr.on('data', (data) => console.log(`FFmpeg Clip ${i}: ${data}`));
+            ffmpegProcess.on('close', (code) => code === 0 ? resolve() : reject(new Error(`FFmpeg clip ${i} failed with code ${code}`)));
+            ffmpegProcess.on('error', reject);
+        });
+
+        clips.push({
+            path: clipPath,
+            metadata: {
+                title: `Short ${i + 1}: ${niche} Highlights`,
+                description: `Clip ${i + 1} from ${niche} - Enjoy this snippet! #${niche.replace(/ /g, '')} #Shorts`,
+                tags: ['shorts', niche]
+            }
+        });
+    }
+    return clips;
+}
+
+async function generateSubtitle(startTime, duration, isHindi) {
+    const subjects = isHindi ? ['ये', 'एक', 'इस', 'वो', 'अद्भुत'] : ['This', 'A', 'The', 'That', 'Amazing'];
+    const actions = isHindi ? ['दिखाता है', 'प्रकट करता है', 'हैरान करता है', 'बताता है', 'रोमांचित करता है'] : ['shows', 'reveals', 'amazes', 'tells', 'thrills'];
+    const twists = isHindi ? ['छिपा खजाना', 'अनोखा मोड़', 'चौंकाने वाला सच', 'रोमांचक खोज', 'दुर्लभ चमत्कार'] : ['hidden treasure', 'unique twist', 'shocking truth', 'exciting find', 'rare wonder'];
+    const endings = isHindi ? ['जो आपको हैरान कर देगा!', 'जो कभी नहीं भूलेंगे!', 'जो सब बदल देगा!', 'जो देखने लायक है!', 'जो अविश्वसनीय है!'] : ['that’ll stun you!', 'you’ll never forget!', 'that changes everything!', 'worth seeing!', 'that’s unreal!'];
+
+    const subject = subjects[Math.floor(Math.random() * subjects.length)];
+    const action = actions[Math.floor(Math.random() * actions.length)];
+    const twist = twists[Math.floor(Math.random() * twists.length)];
+    const ending = endings[Math.floor(Math.random() * endings.length)];
+
+    const narration = `${subject} ${action} ${twist} ${ending}`;
+    const start = formatSrtTime(startTime);
+    const end = formatSrtTime(startTime + duration);
+    return `1\n${start} --> ${end}\n${narration}\n\n`;
+}
+
+async function uploadToYouTube(videoFile, metadata, channelId, youtube) {
     const videoMetadata = {
         snippet: {
-            title: script.title,
-            description: script.description,
-            tags: script.description.match(/#\w+/g)?.map(tag => tag.slice(1)) || [],
+            title: metadata.title,
+            description: metadata.description,
+            tags: metadata.tags,
             categoryId: '22'
         },
-        status: { privacyStatus: 'private' }
+        status: { privacyStatus: 'public' } // Public upload
     };
     return new Promise((resolve, reject) => {
         const fileSize = fs.statSync(videoFile).size;
