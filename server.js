@@ -127,13 +127,18 @@ app.post('/api/create-video', async (req, res) => {
         if (!mediaFiles.length) throw new Error('No media files collected');
         console.log('Media collected:', mediaFiles);
 
-        // Step 3: Assemble video (silent with subtitles)
-        console.log('Step 3: Assembling video...');
-        const videoFile = await assembleVideo(mediaFiles, script, videoType);
+        // Step 3: Generate voiceover
+        console.log('Step 3: Generating voiceover...');
+        const voiceoverFile = await generateVoiceover(script);
+        console.log('Voiceover generated:', voiceoverFile);
+
+        // Step 4: Assemble video
+        console.log('Step 4: Assembling video...');
+        const videoFile = await assembleVideo(mediaFiles, voiceoverFile, script, videoType);
         console.log('Video assembled:', videoFile);
 
-        // Step 4: Upload to YouTube
-        console.log('Step 4: Uploading to YouTube...');
+        // Step 5: Upload to YouTube
+        console.log('Step 5: Uploading to YouTube...');
         const uploadResult = await uploadToYouTube(videoFile, script, channelId, youtube);
         console.log('Video uploaded successfully:', uploadResult.id);
 
@@ -155,54 +160,60 @@ async function generateScript(niche, videoType, keywords, additionalInstructions
     const contentLength = videoType === 'short' ? 'approximately 60 seconds' : '5-6 minutes';
     const subjects = [
         `${niche}`,
-        `a ${niche} marvel`,
-        `the ${niche} realm`,
-        `${niche} mysteries`,
-        `secret ${niche}`
+        `a ${niche} wonder`,
+        `the ${niche} domain`,
+        `${niche} enigmas`,
+        `hidden ${niche}`
     ];
     const actions = [
-        "unveils a surprise like",
-        "shocks with",
-        "amazes by",
-        "reveals",
-        "intrigues with"
+        "unveils a marvel like",
+        "captivates with",
+        "astonishes by",
+        "discloses",
+        "fascinates with"
     ];
     const twists = [
-        "a hidden gem",
-        "an odd twist",
-        "a bizarre truth",
-        "something wild",
-        "a rare find"
+        "a secret treasure",
+        "an unexpected quirk",
+        "a strange reality",
+        "a thrilling fact",
+        "a curious detail"
     ];
     const endings = [
-        "you won’t see coming!",
-        "that flips everything!",
-        "totally out there!",
-        "you gotta hear!",
-        "that’s unreal!"
+        "that’ll leave you speechless!",
+        "you’ll never forget!",
+        "that redefines everything!",
+        "worth sharing!",
+        "that’s pure magic!"
     ];
     const scenes = [];
-    let scriptText = "Hey everyone, buckle up for some wild " + niche + "! ";
+    let scriptText = `Welcome, explorers, to the wild world of ${niche}! Get ready for an epic ride! `;
     
+    // Generate 5 unique facts, each with 5 sub-scenes (25 scenes)
     for (let i = 0; i < 5; i++) {
         const subject = subjects[Math.floor(Math.random() * subjects.length)];
         const action = actions[Math.floor(Math.random() * actions.length)];
         const twist = twists[Math.floor(Math.random() * twists.length)];
         const ending = endings[Math.floor(Math.random() * endings.length)];
         
-        scenes.push({ narration: `${subject} ${action}`, visual_description: `${niche} intro`, duration: 60 / 18 });
-        scenes.push({ narration: `${twist}`, visual_description: `${niche} highlight`, duration: 60 / 18 });
-        scenes.push({ narration: `${ending}`, visual_description: `${niche} reveal`, duration: 60 / 18 });
-        scriptText += `${subject} ${action} ${twist} ${ending} `;
+        scenes.push({ narration: `${subject} ${action}`, visual_description: `${niche} opening shot`, duration: 60 / 30 });
+        scenes.push({ narration: `${twist}`, visual_description: `${niche} close-up`, duration: 60 / 30 });
+        scenes.push({ narration: `that’s ${ending.split(' ')[0]}`, visual_description: `${niche} dramatic reveal`, duration: 60 / 30 });
+        scenes.push({ narration: `${ending.split(' ').slice(1).join(' ')}`, visual_description: `${niche} action scene`, duration: 60 / 30 });
+        scenes.push({ narration: `Amazing, right?`, visual_description: `${niche} highlight`, duration: 60 / 30 });
+        scriptText += `${subject} ${action} ${twist} ${ending} Amazing, right? `;
     }
     
-    scenes.push({ narration: "That’s " + niche + "—", visual_description: niche + " wrap-up", duration: 60 / 18 });
-    scenes.push({ narration: "like and", visual_description: niche + " action", duration: 60 / 18 });
-    scenes.push({ narration: "subscribe for more!", visual_description: niche + " outro", duration: 60 / 18 });
-    scriptText += "That’s " + niche + "—like and subscribe for more!";
+    // Add outro as scenes 26-30
+    scenes.push({ narration: `That’s the magic of ${niche}—`, visual_description: `${niche} finale`, duration: 60 / 30 });
+    scenes.push({ narration: `a journey worth taking!`, visual_description: `${niche} recap`, duration: 60 / 30 });
+    scenes.push({ narration: `Like this video`, visual_description: `${niche} call to action`, duration: 60 / 30 });
+    scenes.push({ narration: `and subscribe`, visual_description: `${niche} subscribe button`, duration: 60 / 30 });
+    scenes.push({ narration: `for more adventures!`, visual_description: `${niche} outro`, duration: 60 / 30 });
+    scriptText += `That’s the magic of ${niche}—a journey worth taking! Like this video and subscribe for more adventures!`;
 
-    const title = `Unbelievable ${niche} Secrets Revealed`;
-    const description = `Discover wild ${niche} facts! #${niche.replace(/ /g, '')} #MindBlown`;
+    const title = `Epic ${niche} Secrets Unveiled`;
+    const description = `Embark on a thrilling ${niche} journey! #${niche.replace(/ /g, '')} #EpicSecrets`;
 
     return new Promise((resolve) => {
         setTimeout(() => {
@@ -220,7 +231,7 @@ async function collectMedia(script, niche, pexelsKey) {
     const mediaDir = path.join(__dirname, 'temp', `media_${Date.now()}`);
     fs.mkdirSync(mediaDir, { recursive: true });
     const mediaFiles = [];
-    const maxImages = 18;
+    const maxImages = 30;
     const requests = script.scenes.slice(0, maxImages).map(async (scene, i) => {
         const searchQuery = `${niche} ${scene.visual_description}`.substring(0, 100);
         try {
@@ -229,7 +240,7 @@ async function collectMedia(script, niche, pexelsKey) {
                 params: { query: searchQuery, per_page: 1 }
             });
             if (imageResponse.data.photos?.length > 0) {
-                const imageUrl = imageResponse.data.photos[0].src.tiny;
+                const imageUrl = imageResponse.data.photos[0].src.large; // High-quality large images
                 const imagePath = path.join(mediaDir, `scene_${i}_image.jpg`);
                 const imageWriter = fs.createWriteStream(imagePath);
                 const imageDownload = await axios({ url: imageUrl, method: 'GET', responseType: 'stream' });
@@ -248,7 +259,33 @@ async function collectMedia(script, niche, pexelsKey) {
     return mediaFiles.filter(Boolean);
 }
 
-async function assembleVideo(mediaFiles, script, videoType) {
+async function generateVoiceover(script) {
+    const audioDir = path.join(__dirname, 'temp', `audio_${Date.now()}`);
+    fs.mkdirSync(audioDir, { recursive: true });
+    const fullScript = script.scenes.map(scene => scene.narration).join(' ');
+    const audioPath = path.join(audioDir, 'voiceover.mp3');
+    const elevenlabsKey = process.env.ELEVENLABS_API_KEY || 'sk_4b4b25f3f0b41d28e6a33f9672f80de84a7e9ff042f0a75a'; // Your working key
+    try {
+        const response = await axios.post(
+            'https://api.elevenlabs.io/v1/text-to-speech/82hBsVN6GRUwWKT8d1Kz',
+            { text: fullScript, voice_settings: { stability: 0.5, similarity_boost: 0.5 } },
+            {
+                headers: {
+                    'xi-api-key': elevenlabsKey,
+                    'Content-Type': 'application/json'
+                },
+                responseType: 'arraybuffer'
+            }
+        );
+        fs.writeFileSync(audioPath, Buffer.from(response.data));
+        return audioPath;
+    } catch (error) {
+        console.error('Error generating voiceover:', error.message);
+        throw error;
+    }
+}
+
+async function assembleVideo(mediaFiles, voiceoverFile, script, videoType) {
     const outputDir = path.join(__dirname, 'temp', `output_${Date.now()}`);
     fs.mkdirSync(outputDir, { recursive: true });
     const outputPath = path.join(outputDir, 'final_video.mp4');
@@ -271,14 +308,19 @@ async function assembleVideo(mediaFiles, script, videoType) {
     }
     fs.writeFileSync(subtitleFile, subtitleContent);
     return new Promise((resolve, reject) => {
-        const ffmpegProcess = spawn('/usr/bin/ffmpeg', [ // Use Render's system FFmpeg
+        const ffmpegProcess = spawn('/usr/bin/ffmpeg', [ // Render's system FFmpeg
             '-f', 'concat',
             '-safe', '0',
             '-i', ffmpegFile,
+            '-i', voiceoverFile,
             '-c:v', 'libx264',
-            '-an', // No audio
+            '-c:a', 'aac',
+            '-map', '0:v',
+            '-map', '1:a',
+            '-shortest',
             '-vf', `subtitles=${subtitleFile}`,
-            '-preset', 'ultrafast',
+            '-preset', 'medium', // Better quality
+            '-crf', '23', // High quality with reasonable size
             outputPath
         ]);
         ffmpegProcess.stderr.on('data', (data) => console.log(`FFmpeg: ${data}`));
