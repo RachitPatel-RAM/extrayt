@@ -129,8 +129,14 @@ app.post('/api/create-video', async (req, res) => {
 
         // Step 3: Generate voiceover
         console.log('Step 3: Generating voiceover...');
-        const voiceoverFile = await generateVoiceover(script);
-        console.log('Voiceover generated:', voiceoverFile);
+        let voiceoverFile;
+        try {
+            voiceoverFile = await generateVoiceover(script);
+            console.log('Voiceover generated:', voiceoverFile);
+        } catch (error) {
+            console.error('Voiceover failed, proceeding with silent video:', error.message);
+            voiceoverFile = null; // Fallback to silent video
+        }
 
         // Step 4: Assemble video
         console.log('Step 4: Assembling video...');
@@ -240,7 +246,7 @@ async function collectMedia(script, niche, pexelsKey) {
                 params: { query: searchQuery, per_page: 1 }
             });
             if (imageResponse.data.photos?.length > 0) {
-                const imageUrl = imageResponse.data.photos[0].src.large; // High-quality large images
+                const imageUrl = imageResponse.data.photos[0].src.large;
                 const imagePath = path.join(mediaDir, `scene_${i}_image.jpg`);
                 const imageWriter = fs.createWriteStream(imagePath);
                 const imageDownload = await axios({ url: imageUrl, method: 'GET', responseType: 'stream' });
@@ -264,7 +270,7 @@ async function generateVoiceover(script) {
     fs.mkdirSync(audioDir, { recursive: true });
     const fullScript = script.scenes.map(scene => scene.narration).join(' ');
     const audioPath = path.join(audioDir, 'voiceover.mp3');
-    const elevenlabsKey = process.env.ELEVENLABS_API_KEY || 'sk_4b4b25f3f0b41d28e6a33f9672f80de84a7e9ff042f0a75a'; // Your working key
+    const elevenlabsKey = process.env.ELEVENLABS_API_KEY || 'sk_4b4b25f3f0b41d28e6a33f9672f80de84a7e9ff042f0a75a';
     try {
         const response = await axios.post(
             'https://api.elevenlabs.io/v1/text-to-speech/82hBsVN6GRUwWKT8d1Kz',
@@ -308,7 +314,7 @@ async function assembleVideo(mediaFiles, voiceoverFile, script, videoType) {
     }
     fs.writeFileSync(subtitleFile, subtitleContent);
     return new Promise((resolve, reject) => {
-        const ffmpegProcess = spawn('/usr/bin/ffmpeg', [ // Render's system FFmpeg
+        const ffmpegArgs = voiceoverFile ? [
             '-f', 'concat',
             '-safe', '0',
             '-i', ffmpegFile,
@@ -319,10 +325,21 @@ async function assembleVideo(mediaFiles, voiceoverFile, script, videoType) {
             '-map', '1:a',
             '-shortest',
             '-vf', `subtitles=${subtitleFile}`,
-            '-preset', 'medium', // Better quality
-            '-crf', '23', // High quality with reasonable size
+            '-preset', 'medium',
+            '-crf', '23',
             outputPath
-        ]);
+        ] : [
+            '-f', 'concat',
+            '-safe', '0',
+            '-i', ffmpegFile,
+            '-c:v', 'libx264',
+            '-an',
+            '-vf', `subtitles=${subtitleFile}`,
+            '-preset', 'medium',
+            '-crf', '23',
+            outputPath
+        ];
+        const ffmpegProcess = spawn('/usr/bin/ffmpeg', ffmpegArgs);
         ffmpegProcess.stderr.on('data', (data) => console.log(`FFmpeg: ${data}`));
         ffmpegProcess.on('close', (code) => {
             if (code === 0) resolve(outputPath);
